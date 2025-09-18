@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>STIG Analysis - Cybersecurity Management Suite</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+  <!-- Navigation will be inserted by navigation.js -->
+
+  <header class="page-header">
+    <div class="header-content">
+      <h1>STIG → NIST Control Mapper</h1>
+      <p>Import and analyze STIG files to map vulnerabilities to NIST controls</p>
+    </div>
+    
+    <div class="header-actions">
+      <button id="toggle-debug-panel" class="btn btn-secondary" title="Toggle Debug Panel">🔧 Debug</button>
+    </div>
+    
+    <div class="file-loader">
+      <label for="cklbFile" class="btn">Load STIG Files</label>
+      <input id="cklbFile" type="file" accept=".json,.cklb,.ckl,.xml,application/json,application/xml" multiple />
+      <span id="fileName" class="file-name">No files selected</span>
+      <div id="fileList" class="file-list" style="display: none;"></div>
+      
+      <label for="cciFile" class="btn btn-secondary">Load CCI List XML (Optional)</label>
+      <input id="cciFile" type="file" accept=".xml,application/xml" />
+      <span id="cciFileName" class="file-name">Built-in mapping active</span>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="filters">
+      <div class="filter-row">
+        <div class="filter">
+          <label for="familySelect">NIST Family</label>
+          <select id="familySelect">
+            <option value="">All</option>
+          </select>
+        </div>
+
+        <div class="filter">
+          <label for="controlSelect">NIST Control</label>
+          <select id="controlSelect">
+            <option value="">All</option>
+          </select>
+        </div>
+
+        <div class="filter">
+          <label for="severitySelect">Severity</label>
+          <select id="severitySelect">
+            <option value="">All</option>
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+            <option value="critical">critical</option>
+          </select>
+        </div>
+
+        <div class="filter">
+          <label for="statusSelect">Status</label>
+          <select id="statusSelect">
+            <option value="">All</option>
+            <option value="open">open</option>
+            <option value="not_a_finding">not_a_finding</option>
+            <option value="not_applicable">not_applicable</option>
+            <option value="failed">failed</option>
+            <option value="passed">passed</option>
+            <option value="not_reviewed">not_reviewed</option>
+          </select>
+        </div>
+
+        <div class="filter">
+          <label for="stigSelect">STIG Name</label>
+          <select id="stigSelect">
+            <option value="">All</option>
+          </select>
+        </div>
+
+        <div class="filter">
+          <label for="cciInput">CCI</label>
+          <input id="cciInput" type="text" placeholder="e.g., CCI-000366" />
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter search-filter">
+          <label for="searchInput">Free-text search</label>
+          <input id="searchInput" type="search" placeholder="Search title, discussion, details, etc." />
+        </div>
+        <div class="filter">
+          <button id="exportBtn" class="btn btn-export" disabled>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8.5 6.5a.5.5 0 0 0-1 0v3.793L6.354 9.146a.5.5 0 1 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L8.5 10.293V6.5z"/>
+              <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+            </svg>
+            Export to Excel
+          </button>
+          <button id="createPOAMBtn" class="btn btn-primary" disabled title="Create POAM from selected vulnerabilities">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+            </svg>
+            Create POAM
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="results">
+      <div class="table-wrap">
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th class="select-col">
+                <input type="checkbox" id="selectAll" title="Select all visible rows">
+              </th>
+              <th class="expand-col"></th>
+              <th data-key="nistControls" class="sortable">
+                NIST Control(s)
+                <span class="sort-indicator">↕</span>
+              </th>
+              <th data-key="ccis" class="sortable">
+                CCI(s)
+                <span class="sort-indicator">↕</span>
+              </th>
+              <th data-key="group_id" class="sortable">
+                Vuln-ID
+                <span class="sort-indicator">↕</span>
+              </th>
+              <th data-key="rule_id" class="sortable">
+                Rule-ID
+                <span class="sort-indicator">↕</span>
+              </th>
+              <th data-key="rule_version" class="sortable">
+                Rule Version
+                <span class="sort-indicator">↕</span>
+              </th>
+              <th data-key="rule_title" class="sortable">
+                Title
+                <span class="sort-indicator">↕</span>
+              </th>
+              <th data-key="severity" class="sortable">
+                Severity
+                <span class="sort-indicator">↕</span>
+              </th>
+              <th data-key="status" class="sortable">
+                Status
+                <span class="sort-indicator">↕</span>
+              </th>
+              <th data-key="stig_name" class="sortable">
+                STIG Name
+                <span class="sort-indicator">↕</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="empty-state" hidden>
+        Load a CKLB JSON or CKL XML file to view and filter NIST mappings.
+      </div>
+      <div id="noResultsState" class="empty-state" hidden>
+        No results match your filters.
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <small>Client-side only. Data persisted locally in your browser.</small>
+  </footer>
+
+  <!-- Debug Panel -->
+  <div id="debug-panel" class="debug-panel" style="display: none;">
+    <div class="debug-header">
+      <h3>🔧 Debug Panel</h3>
+      <button id="close-debug-panel" class="btn btn-icon" title="Close Debug Panel">✕</button>
+    </div>
+    <div class="debug-content">
+      <div class="debug-section">
+        <button onclick="debugTestInitialization()">Test DataStore Init</button>
+        <button onclick="debugSaveTestData()">Save Test Data</button>
+        <button onclick="debugLoadData()">Load Data</button>
+        <button onclick="debugCheckDatabase()">Check DB</button>
+        <button onclick="debugClearData()">Clear Data</button>
+      </div>
+      <div class="debug-console">
+        <h4>Console Output:</h4>
+        <div id="debug-console-output" class="console-output"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POAM Creation Modal -->
+  <div id="poam-creation-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Confirm POAM Creation</h3>
+        <button type="button" class="btn btn-icon" id="close-poam-creation-modal" title="Close">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>You are about to create POAMs for the selected vulnerabilities. This will add them to the POAM Management page.</p>
+        <div id="poam-creation-summary"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancel-poam-creation">Cancel</button>
+        <button class="btn btn-primary" id="confirm-poam-creation">Create POAMs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core Systems (load first) -->
+  <script src="../scripts/app-state.js"></script>
+  <script src="../scripts/data-manager.js"></script>
+  
+  <!-- Core functionality modules -->
+  <script src="../scripts/importer.js"></script>
+  <script src="../scripts/vuln-table.js"></script>
+  <script src="../scripts/excel-export.js"></script>
+  
+  <!-- UI Framework and Components -->
+  <link rel="stylesheet" href="../components/ui-components.css">
+  <script src="../components/ui-framework.js"></script>
+  <script src="../components/icon-library.js"></script>
+  <script src="../components/ui-components.js"></script>
+  <script src="../components/table-component.js"></script>
+  <script src="../components/layout-components.js"></script>
+  
+  <!-- Navigation and Application-specific UI components -->
+  <script src="../components/navigation.js"></script>
+  <script src="../components/theme-manager.js"></script>
+  <script src="../components/status-messages.js"></script>
+  <script src="../components/filter-panel.js"></script>
+  <script src="../components/file-loader.js"></script>
+  
+  <!-- Main application controller -->
+  <script src="../scripts/app.js"></script>
+  
+  <!-- Application initialization -->
+  <script>
+    // Initialize the STIG analysis page
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Initialize the application using the new state manager
+        await AppState.initialize();
+        
+        // Setup STIG-specific functionality
+        setupPOAMCreation();
+        setupDebugPanel();
+        
+        console.log('STIG Analysis Page ready!');
+        
+      } catch (error) {
+        console.error('Failed to initialize STIG analysis page:', error);
+        // Error handling is managed by AppState
+      }
+    });
+
+    // Setup POAM creation functionality
+    function setupPOAMCreation() {
+      const createPOAMBtn = document.getElementById('createPOAMBtn');
+      const selectAllCheckbox = document.getElementById('selectAll');
+      
+      // Handle select all functionality
+      selectAllCheckbox.addEventListener('change', (e) => {
+        const checkboxes = document.querySelectorAll('#resultsTable tbody input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = e.target.checked);
+        updatePOAMButtonState();
+      });
+      
+      // Handle individual row selection
+      document.addEventListener('change', (e) => {
+        if (e.target.matches('#resultsTable tbody input[type="checkbox"]')) {
+          updatePOAMButtonState();
+        }
+      });
+      
+      // Handle POAM creation
+      const poamModal = document.getElementById('poam-creation-modal');
+      const closePOAMModalBtn = document.getElementById('close-poam-creation-modal');
+      const cancelPOAMModalBtn = document.getElementById('cancel-poam-creation');
+      const confirmPOAMModalBtn = document.getElementById('confirm-poam-creation');
+      const poamSummary = document.getElementById('poam-creation-summary');
+
+      createPOAMBtn.addEventListener('click', () => {
+        const selectedRows = getSelectedRows();
+        if (selectedRows.length > 0) {
+          poamSummary.innerHTML = `
+            <p><strong>${selectedRows.length} vulnerabilities selected:</strong></p>
+            <ul>
+              ${selectedRows.slice(0, 10).map(row => `<li>${row.rule_title}</li>`).join('')}
+              ${selectedRows.length > 10 ? '<li>...and more</li>' : ''}
+            </ul>
+          `;
+          poamModal.classList.add('active');
+        }
+      });
+
+      const closePOAMModal = () => poamModal.classList.remove('active');
+
+      closePOAMModalBtn.addEventListener('click', closePOAMModal);
+      cancelPOAMModalBtn.addEventListener('click', closePOAMModal);
+
+      confirmPOAMModalBtn.addEventListener('click', async () => {
+        const selectedRows = getSelectedRows();
+        if (selectedRows.length > 0) {
+          await createPOAMsFromRows(selectedRows);
+        }
+        closePOAMModal();
+      });
+    }
+
+    // Setup debug panel functionality
+    function setupDebugPanel() {
+      const toggleBtn = document.getElementById('toggle-debug-panel');
+      const closeBtn = document.getElementById('close-debug-panel');
+      const debugPanel = document.getElementById('debug-panel');
+
+      if (toggleBtn && debugPanel) {
+        toggleBtn.addEventListener('click', () => {
+          debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+        });
+      }
+
+      if (closeBtn && debugPanel) {
+        closeBtn.addEventListener('click', () => {
+          debugPanel.style.display = 'none';
+        });
+      }
+    }
+
+    // Debug functions
+    async function debugTestInitialization() {
+      try {
+        if (!window.DataStore) {
+          throw new Error('DataStore not loaded');
+        }
+
+        await window.DataStore.ready();
+
+        showDebugMessage('✅ DataStore initialized successfully', 'success');
+        showDebugMessage(`DataStore ready: ${window.DataStore.isReady}`, 'info');
+        showDebugMessage(`Using localStorage fallback: ${window.DataStore.useLocalStorage}`, 'info');
+        showDebugMessage(`Database name: ${window.DataStore.dbName}`, 'info');
+        showDebugMessage(`Database version: ${window.DataStore.dbVersion}`, 'info');
+      } catch (error) {
+        showDebugMessage(`❌ Initialization failed: ${error.message}`, 'error');
+      }
+    }
+
+    async function debugSaveTestData() {
+      try {
+        showDebugMessage('Saving test data...', 'info');
+
+        // Create test STIG data
+        const testData = {
+          stigName: 'Debug Test STIG',
+          rows: [
+            {
+              group_id: 'V-DEBUG-001',
+              rule_id: 'SV-DEBUG-001r1',
+              rule_version: '1.0',
+              rule_title: 'Debug Test Rule 1',
+              severity: 'high',
+              status: 'open',
+              stig_name: 'Debug Test STIG',
+              nistControls: ['AC-1', 'AC-2'],
+              ccis: ['CCI-000001', 'CCI-000002'],
+              discussion: 'This is a debug test rule for troubleshooting data persistence.'
+            }
+          ]
+        };
+
+        const saveResult = await window.DataStore.saveStigData(testData, 'debug-test.json', 'application/json');
+
+        showDebugMessage('✅ Test data saved successfully', 'success');
+        showDebugMessage(`Record ID: ${saveResult.id}`, 'info');
+        showDebugMessage(`File Name: ${saveResult.fileName}`, 'info');
+        showDebugMessage(`Row Count: ${saveResult.rowCount}`, 'info');
+        showDebugMessage(`Import Date: ${new Date(saveResult.importDate).toLocaleString()}`, 'info');
+      } catch (error) {
+        showDebugMessage(`❌ Save failed: ${error.message}`, 'error');
+      }
+    }
+
+    async function debugLoadData() {
+      try {
+        showDebugMessage('Loading STIG data...', 'info');
+
+        const stigData = await window.DataStore.getAllStigRows();
+        const fileMetadata = await window.DataStore.getStigData();
+
+        if (stigData.length === 0) {
+          showDebugMessage('ℹ️ No STIG data found in storage', 'info');
+          return;
+        }
+
+        showDebugMessage(`✅ Loaded ${stigData.length} STIG rows from ${fileMetadata.length} files`, 'success');
+
+        fileMetadata.forEach(file => {
+          showDebugMessage(`📁 ${file.fileName} - ${file.rowCount} rows, imported ${new Date(file.importDate).toLocaleString()}`, 'info');
+        });
+
+        if (stigData.length > 0) {
+          showDebugMessage('📋 Sample data:', 'info');
+          showDebugMessage(JSON.stringify(stigData[0], null, 2), 'info');
+        }
+      } catch (error) {
+        showDebugMessage(`❌ Load failed: ${error.message}`, 'error');
+      }
+    }
+
+    async function debugCheckDatabase() {
+      try {
+        showDebugMessage('Checking database contents...', 'info');
+
+        const stores = ['stigData', 'poams', 'milestones', 'cciMappings', 'settings'];
+
+        for (const store of stores) {
+          try {
+            const data = await window.DataStore.read(store);
+            showDebugMessage(`${store}: ${data.length} records`, 'info');
+
+            if (data.length > 0 && data.length <= 3) {
+              showDebugMessage(JSON.stringify(data, null, 2), 'info');
+            } else if (data.length > 3) {
+              showDebugMessage(JSON.stringify(data.slice(0, 2), null, 2) + `\n...and ${data.length - 2} more records`, 'info');
+            }
+          } catch (storeError) {
+            showDebugMessage(`${store}: Error - ${storeError.message}`, 'error');
+          }
+        }
+      } catch (error) {
+        showDebugMessage(`❌ Database check failed: ${error.message}`, 'error');
+      }
+    }
+
+    async function debugClearData() {
+      try {
+        if (!confirm('Are you sure you want to clear ALL data? This cannot be undone.')) {
+          return;
+        }
+
+        showDebugMessage('Clearing all data...', 'info');
+
+        await window.DataStore.clearAllData();
+
+        showDebugMessage('✅ All data cleared successfully', 'success');
+      } catch (error) {
+        showDebugMessage(`❌ Clear failed: ${error.message}`, 'error');
+      }
+    }
+
+    function showDebugMessage(message, type = 'info') {
+      const consoleOutput = document.getElementById('debug-console-output');
+      if (!consoleOutput) return;
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `debug-message debug-${type}`;
+      messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+
+      consoleOutput.appendChild(messageDiv);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    function updatePOAMButtonState() {
+      const selectedCount = document.querySelectorAll('#resultsTable tbody input[type="checkbox"]:checked').length;
+      const createPOAMBtn = document.getElementById('createPOAMBtn');
+      
+      createPOAMBtn.disabled = selectedCount === 0;
+      createPOAMBtn.textContent = selectedCount > 0 ? 
+        `Create POAM (${selectedCount} selected)` : 'Create POAM';
+    }
+
+    function getSelectedRows() {
+      const selectedRows = [];
+      const checkboxes = document.querySelectorAll('#resultsTable tbody input[type="checkbox"]:checked');
+      
+      checkboxes.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        const rowIndex = parseInt(row.dataset.rowIndex);
+        if (!isNaN(rowIndex) && window.app.state.allRows[rowIndex]) {
+          selectedRows.push(window.app.state.allRows[rowIndex]);
+        }
+      });
+      
+      return selectedRows;
+    }
+
+    async function createPOAMsFromRows(stigRows) {
+      try {
+        if (!window.DataStore) {
+          window.app.modules.statusMessages.showError('Data storage not available. Cannot create POAMs.');
+          return;
+        }
+
+        let createdCount = 0;
+        
+        for (const row of stigRows) {
+          // Check if POAM already exists for this vulnerability
+          const existingPOAMs = await DataStore.getPOAMs({ vulnId: row.group_id });
+          
+          if (existingPOAMs.length === 0) {
+            // Create new POAM
+            const poamData = {
+              vulnId: row.group_id,
+              title: row.rule_title,
+              severity: row.severity,
+              nistControls: row.nistControls.join(', '),
+              ccis: row.ccis.join(', '),
+              status: 'open',
+              assignee: '',
+              dueDate: '',
+              progress: 0,
+              discussion: row.discussion || '',
+              fixText: row.fixText || '',
+              stigName: row.stig_name,
+              sourceFile: row._sourceFile || '',
+              importDate: row._importDate || new Date().toISOString()
+            };
+            
+            await DataStore.savePOAM(poamData);
+            createdCount++;
+          }
+        }
+        
+        if (createdCount > 0) {
+          window.app.modules.statusMessages.showSuccess(
+            `Created ${createdCount} new POAM${createdCount > 1 ? 's' : ''} from selected vulnerabilities`
+          );
+          
+          // Clear selections
+          document.getElementById('selectAll').checked = false;
+          document.querySelectorAll('#resultsTable tbody input[type="checkbox"]').forEach(cb => cb.checked = false);
+          updatePOAMButtonState();
+        } else {
+          window.app.modules.statusMessages.showInfo('No new POAMs created - POAMs already exist for selected vulnerabilities');
+        }
+        
+      } catch (error) {
+        console.error('Failed to create POAMs:', error);
+        window.app.modules.statusMessages.showError('Failed to create POAMs: ' + error.message);
+      }
+    }
+
+    function showFallbackError(message) {
+      const errorDiv = document.createElement('div');
+      errorDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #dc3545;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 5px;
+        z-index: 10000;
+        font-family: system-ui, -apple-system, sans-serif;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      `;
+      errorDiv.textContent = message;
+      document.body.appendChild(errorDiv);
+      
+      setTimeout(() => {
+        if (errorDiv.parentNode) {
+          errorDiv.parentNode.removeChild(errorDiv);
+        }
+      }, 10000);
+    }
+  </script>
+</body>
+</html>

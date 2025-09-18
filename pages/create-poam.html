@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create POAM - Cybersecurity Management Suite</title>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+  <!-- Navigation will be inserted by navigation.js -->
+
+  <header class="page-header">
+    <div class="header-content">
+      <h1 id="page-title">Create New POAM</h1>
+      <p>Create a Plan of Action & Milestones for vulnerability remediation</p>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <!-- POAM Creation Form -->
+    <section class="poam-creation-form">
+      <div class="form-container">
+        <!-- Vulnerability Selector -->
+        <div class="form-section">
+          <div class="section-header">
+            <h3>Select Vulnerabilities</h3>
+            <div class="section-actions">
+              <select id="status-filter" class="form-control form-control-sm">
+                <option value="open">Open Findings</option>
+                <option value="not_reviewed">Not Reviewed</option>
+                <option value="failed">Failed</option>
+                <option value="all">All Findings</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="vulnerability-selector">
+            <div class="selector-controls">
+              <div class="search-box">
+                <input type="text" id="vuln-search" placeholder="Search vulnerabilities..." class="form-control">
+                <button type="button" class="btn btn-outline btn-sm" id="clear-search">Clear</button>
+              </div>
+              <div class="selection-info">
+                <span id="selected-count">0 selected</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="clear-selection">Clear All</button>
+              </div>
+            </div>
+
+            <div class="vulnerabilities-table-container">
+              <table class="data-table" id="vulnerabilities-table">
+                <thead>
+                  <tr>
+                    <th width="40"><input type="checkbox" id="select-all"></th>
+                    <th>Vuln ID</th>
+                    <th>Title</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>STIG</th>
+                    <th>NIST Controls</th>
+                    <th>CCIs</th>
+                  </tr>
+                </thead>
+                <tbody id="vulnerabilities-tbody">
+                  <tr>
+                    <td colspan="8" class="empty-state">Loading vulnerabilities...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- POAM Form -->
+        <form id="poam-form" class="poam-form">
+          <div class="form-section">
+            <h3>Basic Information</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="poam-vuln-id">Vulnerability ID</label>
+                <input id="poam-vuln-id" class="form-control" type="text" placeholder="e.g., V-12345" required />
+              </div>
+              <div class="form-group">
+                <label for="poam-title">Title</label>
+                <input id="poam-title" class="form-control" type="text" placeholder="Brief description of the POAM" required />
+              </div>
+              <div class="form-group">
+                <label for="poam-severity">Severity</label>
+                <select id="poam-severity" class="form-control" required>
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="poam-status">Status</label>
+                <select id="poam-status" class="form-control" required>
+                  <option value="open">Open</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="pending-validation">Pending Validation</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="poam-nist">NIST Control(s)</label>
+                <input id="poam-nist" class="form-control" type="text" placeholder="e.g., AC-1, AC-2" />
+              </div>
+              <div class="form-group">
+                <label for="poam-cci">CCI(s)</label>
+                <input id="poam-cci" class="form-control" type="text" placeholder="e.g., CCI-000001" />
+              </div>
+              <div class="form-group">
+                <label for="poam-assignee">Assignee</label>
+                <input id="poam-assignee" class="form-control" type="text" placeholder="Person responsible" />
+              </div>
+              <div class="form-group">
+                <label for="poam-due-date">Due Date</label>
+                <input id="poam-due-date" class="form-control" type="date" />
+              </div>
+              <div class="form-group">
+                <label for="poam-progress">Progress (%)</label>
+                <input id="poam-progress" class="form-control" type="number" min="0" max="100" value="0" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Details</h3>
+            <div class="form-group">
+              <label for="poam-description">Description</label>
+              <textarea id="poam-description" class="form-control" rows="3" placeholder="Detailed description of the vulnerability and POAM"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="poam-discussion">Discussion/Notes</label>
+              <textarea id="poam-discussion" class="form-control" rows="3" placeholder="Additional discussion or notes"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="poam-fix-text">Remediation Plan</label>
+              <textarea id="poam-fix-text" class="form-control" rows="4" placeholder="Detailed remediation steps and plan"></textarea>
+            </div>
+          </div>
+
+          <!-- Embedded Milestones Section -->
+          <div class="form-section">
+            <div class="section-header">
+              <h3>Milestones</h3>
+              <button type="button" class="btn btn-outline" id="poam-ms-add-btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                </svg>
+                Add Milestone
+              </button>
+            </div>
+
+            <div id="poam-ms-inline-form" class="milestone-form" style="display:none;">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="poam-ms-title">Milestone Title</label>
+                  <input id="poam-ms-title" class="form-control" type="text" placeholder="Milestone description" />
+                </div>
+                <div class="form-group">
+                  <label for="poam-ms-due">Due Date</label>
+                  <input id="poam-ms-due" class="form-control" type="date" />
+                </div>
+                <div class="form-group">
+                  <label for="poam-ms-status">Status</label>
+                  <select id="poam-ms-status" class="form-control">
+                    <option value="open">Open</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="poam-ms-progress">Progress (%)</label>
+                  <input id="poam-ms-progress" class="form-control" type="number" min="0" max="100" value="0" />
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                  <label for="poam-ms-notes">Notes</label>
+                  <textarea id="poam-ms-notes" class="form-control" rows="2" placeholder="Additional notes for this milestone"></textarea>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                  <div class="flex items-center gap-2">
+                    <button type="button" class="btn btn-primary" id="poam-ms-inline-save">Add Milestone</button>
+                    <button type="button" class="btn btn-secondary" id="poam-ms-inline-cancel">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="milestones-list">
+              <table class="data-table" id="milestones-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Progress</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="poam-modal-ms-tbody">
+                  <!-- Milestones will be added here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <input type="hidden" id="poam-edit-index" value="-1" />
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancel-poam" onclick="window.history.back()">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+              </svg>
+              Cancel
+            </button>
+            <button type="button" class="btn btn-primary" id="save-poam">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 0 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 0 0-1H2z"/>
+              </svg>
+              Save POAM
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- Core Systems (load first) -->
+  <script src="../scripts/app-state.js"></script>
+  <script src="../scripts/data-store.js"></script>
+
+  <!-- UI Framework and Components -->
+  <link rel="stylesheet" href="../components/ui-components.css">
+  <script src="../components/ui-framework.js"></script>
+  <script src="../components/icon-library.js"></script>
+  <script src="../components/ui-components.js"></script>
+
+  <!-- Navigation and Application-specific UI components -->
+  <script src="../components/navigation.js"></script>
+  <script src="../components/theme-manager.js"></script>
+  <script src="../components/status-messages.js"></script>
+
+  <!-- POAM Management functionality -->
+  <script src="../scripts/poam-manager.js"></script>
+
+  <!-- Application initialization -->
+  <script>
+    let poamManager;
+    let selectedVulnerabilities = new Set();
+    let allVulnerabilities = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Initialize the application using the new state manager
+        await AppState.initialize();
+
+        // Check if we're editing an existing POAM
+        const editData = sessionStorage.getItem('editPOAM');
+        let isEditing = false;
+        let existingPOAM = null;
+
+        if (editData) {
+          existingPOAM = JSON.parse(editData);
+          isEditing = true;
+          sessionStorage.removeItem('editPOAM'); // Clear the data
+          
+          // Update page title
+          const pageTitle = document.getElementById('page-title');
+          if (pageTitle) {
+            pageTitle.textContent = 'Edit POAM';
+          }
+        }
+
+        // Initialize POAM manager
+        const dataStore = AppState.state.dataStore;
+        const statusMessages = AppState.getComponent('statusMessages');
+        
+        if (window.POAMManager) {
+          poamManager = new POAMManager(dataStore, statusMessages);
+          window.poamManager = poamManager; // Make it globally accessible
+
+          // Initialize the form for creating/editing POAMs
+          poamManager.initializeCreateForm();
+          
+          // Populate form if editing
+          if (isEditing && existingPOAM) {
+            poamManager.populateEditForm(existingPOAM);
+          }
+        }
+
+        // Initialize vulnerability selector
+        initializeVulnerabilitySelector();
+
+        console.log('POAM Creation Page ready!');
+        
+      } catch (error) {
+        console.error('Failed to initialize POAM creation page:', error);
+        // Error handling is managed by AppState
+      }
+    });
+
+    // Vulnerability selector functionality
+    async function initializeVulnerabilitySelector() {
+      const tbody = document.getElementById('vulnerabilities-tbody');
+      const statusFilter = document.getElementById('status-filter');
+      const searchInput = document.getElementById('vuln-search');
+      const selectAllCheckbox = document.getElementById('select-all');
+      const clearSearchBtn = document.getElementById('clear-search');
+      const clearSelectionBtn = document.getElementById('clear-selection');
+
+      if (!tbody || !window.DataStore) {
+        console.warn('DataStore or tbody not available');
+        return;
+      }
+
+      try {
+        // Wait for DataStore to be ready
+        await window.DataStore.ready();
+        console.log('DataStore is ready, loading vulnerabilities');
+
+        // Load vulnerabilities
+        const stigRows = await window.DataStore.getAllStigRows();
+        console.log('Loaded STIG rows:', stigRows.length);
+
+        allVulnerabilities = stigRows.filter(row =>
+          row.status === 'open' ||
+          row.status === 'not_reviewed' ||
+          row.status === 'failed'
+        );
+
+        console.log('Filtered vulnerabilities:', allVulnerabilities.length);
+
+        renderVulnerabilitySelector(allVulnerabilities);
+
+        // Set up event listeners
+        if (statusFilter) {
+          statusFilter.addEventListener('change', () => {
+            filterVulnerabilities();
+          });
+        }
+
+        if (searchInput) {
+          searchInput.addEventListener('input', () => {
+            filterVulnerabilities();
+          });
+        }
+
+        if (clearSearchBtn) {
+          clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            filterVulnerabilities();
+          });
+        }
+
+        if (selectAllCheckbox) {
+          selectAllCheckbox.addEventListener('change', () => {
+            toggleSelectAll();
+          });
+        }
+
+        if (clearSelectionBtn) {
+          clearSelectionBtn.addEventListener('click', () => {
+            clearAllSelections();
+          });
+        }
+
+        // Track selected vulnerabilities
+        tbody.addEventListener('change', (e) => {
+          if (e.target.type === 'checkbox' && e.target.id !== 'select-all') {
+            handleVulnerabilitySelection(e.target);
+          }
+        });
+
+      } catch (error) {
+        console.error('Failed to initialize vulnerability selector:', error);
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Failed to load vulnerabilities. Check console for details.</td></tr>';
+      }
+    }
+
+    function renderVulnerabilitySelector(vulnerabilities) {
+      const tbody = document.getElementById('vulnerabilities-tbody');
+
+      if (vulnerabilities.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No vulnerabilities found. Import STIG data first.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = vulnerabilities.map(vuln => `
+        <tr data-vuln-id="${vuln.group_id}">
+          <td><input type="checkbox" id="vuln-${vuln.group_id}"></td>
+          <td>${vuln.group_id || 'N/A'}</td>
+          <td>${vuln.rule_title || 'N/A'}</td>
+          <td>
+            <span class="badge severity-${(vuln.severity || 'unknown').toLowerCase()}">
+              ${(vuln.severity || 'unknown').toUpperCase()}
+            </span>
+          </td>
+          <td>
+            <span class="badge status-${(vuln.status || 'unknown').toLowerCase().replace('_', '-')}">
+              ${(vuln.status || 'unknown').replace('_', ' ').toUpperCase()}
+            </span>
+          </td>
+          <td>${vuln.stig_name || 'N/A'}</td>
+          <td>${(vuln.nistControls || []).join(', ') || 'N/A'}</td>
+          <td>${(vuln.ccis || []).join(', ') || 'N/A'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function filterVulnerabilities() {
+      const statusFilter = document.getElementById('status-filter');
+      const searchInput = document.getElementById('vuln-search');
+
+      const statusValue = statusFilter ? statusFilter.value : 'all';
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+      const filtered = allVulnerabilities.filter(vuln => {
+        const matchesStatus = statusValue === 'all' || vuln.status === statusValue;
+        const matchesSearch = !searchTerm ||
+          vuln.group_id?.toLowerCase().includes(searchTerm) ||
+          vuln.rule_title?.toLowerCase().includes(searchTerm) ||
+          vuln.stig_name?.toLowerCase().includes(searchTerm);
+
+        return matchesStatus && matchesSearch;
+      });
+
+      renderVulnerabilitySelector(filtered);
+    }
+
+    function handleVulnerabilitySelection(checkbox) {
+      const vulnId = checkbox.id.replace('vuln-', '');
+      const vuln = allVulnerabilities.find(v => v.group_id === vulnId);
+
+      if (checkbox.checked) {
+        selectedVulnerabilities.add(vuln);
+      } else {
+        selectedVulnerabilities.forEach(selectedVuln => {
+          if (selectedVuln.group_id === vulnId) {
+            selectedVulnerabilities.delete(selectedVuln);
+          }
+        });
+      }
+
+      updateSelectedCount();
+
+      // Auto-populate form when vulnerabilities are selected
+      if (selectedVulnerabilities.size === 1) {
+        const selectedVuln = Array.from(selectedVulnerabilities)[0];
+        populateFormFromVulnerability(selectedVuln);
+      } else if (selectedVulnerabilities.size === 0) {
+        clearForm();
+      }
+    }
+
+    function populateFormFromVulnerability(vuln) {
+      // Populate form fields with vulnerability data
+      const fields = {
+        'poam-vuln-id': vuln.group_id || '',
+        'poam-title': vuln.rule_title || '',
+        'poam-severity': vuln.severity || 'medium',
+        'poam-nist': (vuln.nistControls || []).join(', '),
+        'poam-cci': (vuln.ccis || []).join(', '),
+        'poam-description': vuln.discussion || '',
+        'poam-discussion': vuln.finding_details || '',
+        'poam-fix-text': vuln.fixText || ''
+      };
+
+      Object.entries(fields).forEach(([fieldId, value]) => {
+        const element = document.getElementById(fieldId);
+        if (element) {
+          element.value = value;
+        }
+      });
+    }
+
+    function clearForm() {
+      const form = document.getElementById('poam-form');
+      if (form) {
+        form.reset();
+      }
+    }
+
+    function toggleSelectAll() {
+      const selectAllCheckbox = document.getElementById('select-all');
+      const checkboxes = document.querySelectorAll('#vulnerabilities-tbody input[type="checkbox"]');
+
+      checkboxes.forEach(checkbox => {
+        if (checkbox.id !== 'select-all') {
+          checkbox.checked = selectAllCheckbox.checked;
+          handleVulnerabilitySelection(checkbox);
+        }
+      });
+    }
+
+    function clearAllSelections() {
+      const checkboxes = document.querySelectorAll('#vulnerabilities-tbody input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      selectedVulnerabilities.clear();
+      updateSelectedCount();
+      clearForm();
+    }
+
+    function updateSelectedCount() {
+      const selectedCount = document.getElementById('selected-count');
+      if (selectedCount) {
+        selectedCount.textContent = `${selectedVulnerabilities.size} selected`;
+      }
+    }
+  </script>
+</body>
+</html>

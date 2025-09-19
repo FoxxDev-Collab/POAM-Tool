@@ -64,21 +64,6 @@ class Navigation {
                 </a>
             </div>
             <div class="nav-actions">
-                <div class="nav-stats" id="navStats">
-                    <span class="nav-stat" title="Total STIG Findings">
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z"/>
-                        </svg>
-                        <span id="navStigCount">0</span>
-                    </span>
-                    <span class="nav-stat" title="Total POAMs">
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
-                            <path d="M8.646 6.646a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L10.293 9 8.646 7.354a.5.5 0 0 1 0-.708zm-1.292 0a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0 0 .708l2 2a.5.5 0 0 0 .708-.708L5.707 9l1.647-1.646a.5.5 0 0 0 0-.708z"/>
-                        </svg>
-                        <span id="navPoamCount">0</span>
-                    </span>
-                </div>
                 ${this.currentPage === 'dashboard' ? this.getExportButton() : ''}
                 <div class="nav-menu-toggle" id="navMenuToggle">
                     <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
@@ -134,51 +119,13 @@ class Navigation {
     }
 
     async updateStats() {
-        if (!window.DataStore) return;
-
-        try {
-            // Check if DataStore is ready and has the required methods
-            if (typeof DataStore.ready === 'function') {
-                await DataStore.ready();
-            }
-            
-            if (typeof DataStore.getDataStats !== 'function') {
-                console.log('DataStore.getDataStats not available yet');
-                return;
-            }
-            
-            const stats = await DataStore.getDataStats();
-            
-            const stigCount = this.navElement.querySelector('#navStigCount');
-            const poamCount = this.navElement.querySelector('#navPoamCount');
-            
-            if (stigCount) stigCount.textContent = stats.totalStigRows || 0;
-            if (poamCount) poamCount.textContent = stats.poams || 0;
-        } catch (error) {
-            console.error('Failed to update navigation stats:', error);
-        }
+        // Stats display removed - keeping method for future use if needed
+        return;
     }
 
     mount(container) {
         if (container) {
             container.appendChild(this.render());
-            // Update stats after mounting with longer delay to allow DataStore initialization
-            setTimeout(() => this.updateStats(), 1000);
-            
-            // Listen for AppState stats updates if available
-            if (window.AppState) {
-                AppState.on('stats-updated', (event) => {
-                    const stats = event.detail;
-                    if (stats) {
-                        const stigCount = this.navElement.querySelector('#navStigCount');
-                        const poamCount = this.navElement.querySelector('#navPoamCount');
-                        
-                        if (stigCount) stigCount.textContent = stats.totalStigRows || 0;
-                        if (poamCount) poamCount.textContent = stats.poams || 0;
-                    }
-                });
-            }
-            
         }
         return this;
     }
@@ -213,9 +160,6 @@ function initNavigation() {
     } else {
         document.body.appendChild(nav.render());
     }
-
-    // Update stats periodically (less frequent since we have event-based updates)
-    setInterval(() => nav.updateStats(), 60000); // Update every 60 seconds
 
     return nav;
 }

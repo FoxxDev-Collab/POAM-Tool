@@ -17,45 +17,192 @@
   </header>
 
   <main class="app-main">
-    <!-- Actions -->
-    <section class="filters">
-      <div class="filter-row">
-        <div class="filter">
-          <button id="add-poam-btn" class="btn btn-primary" onclick="window.location.href='create-poam.html'">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-            </svg>
+    <!-- Advanced Filters and Actions -->
+    <section class="advanced-filters">
+      <!-- Primary Actions Row -->
+      <div class="filter-row primary-actions">
+        <div class="filter-group">
+          <button id="add-poam-btn" class="btn btn-primary" onclick="window.location.href='poam-wizard.html'">
+            <span class="btn-icon"></span>
             New POAM
           </button>
-        </div>
-        <div class="filter search-filter">
-          <label for="poam-search">Search POAMs</label>
-          <input id="poam-search" type="search" placeholder="Search POAMs, milestones, assignees..." />
-        </div>
-        <div class="filter">
           <button id="export-btn" class="btn btn-export">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8.5 6.5a.5.5 0 0 0-1 0v3.793L6.354 9.146a.5.5 0 1 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L8.5 10.293V6.5z"/>
-              <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
-            </svg>
+            <span class="btn-icon"></span>
             Export Data
           </button>
         </div>
+
+        <div class="filter-group">
+          <div class="search-container">
+            <span class="search-icon"></span>
+            <input id="poam-search" type="search" placeholder="Search POAMs, assignees, controls..." />
+            <button id="clear-search" class="btn-clear" title="Clear search" style="display: none;">
+              <span class="clear-icon"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <button id="filter-toggle" class="btn btn-secondary filter-btn">
+            <span class="filter-icon"></span>
+            Filters
+            <span class="filter-count" style="display: none;">0</span>
+          </button>
+          <button id="sort-menu-btn" class="btn btn-secondary">
+            <span class="sort-icon"></span>
+            Sort
+          </button>
+        </div>
+      </div>
+
+      <!-- Advanced Filters Panel (Initially Hidden) -->
+      <div id="advanced-filter-panel" class="advanced-filter-panel" style="display: none;">
+        <div class="filter-section">
+          <h4>Filter POAMs</h4>
+          <div class="filter-controls">
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="status-filter">Status</label>
+                <select id="status-filter" class="form-control filter-select">
+                  <option value="">All Status</option>
+                  <option value="open">Open</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="on-hold">On Hold</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label for="priority-filter">Priority</label>
+                <select id="priority-filter" class="form-control filter-select">
+                  <option value="">All Priorities</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label for="assignee-filter">Assignee</label>
+                <select id="assignee-filter" class="form-control filter-select">
+                  <option value="">All Assignees</option>
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label for="progress-filter">Progress</label>
+                <select id="progress-filter" class="form-control filter-select">
+                  <option value="">All Progress</option>
+                  <option value="0">Not Started (0%)</option>
+                  <option value="1-25">Low (1-25%)</option>
+                  <option value="26-50">Medium (26-50%)</option>
+                  <option value="51-75">High (51-75%)</option>
+                  <option value="76-99">Almost Done (76-99%)</option>
+                  <option value="100">Completed (100%)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="due-date-filter">Due Date</label>
+                <select id="due-date-filter" class="form-control filter-select">
+                  <option value="">All Dates</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="due-today">Due Today</option>
+                  <option value="due-week">Due This Week</option>
+                  <option value="due-month">Due This Month</option>
+                  <option value="no-date">No Due Date</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label for="nist-filter">NIST Controls</label>
+                <input id="nist-filter" type="text" class="form-control" placeholder="e.g. AC-2, SC-7">
+              </div>
+
+              <div class="filter-group">
+                <label for="milestone-filter">Milestones</label>
+                <select id="milestone-filter" class="form-control filter-select">
+                  <option value="">All POAMs</option>
+                  <option value="no-milestones">No Milestones</option>
+                  <option value="has-milestones">Has Milestones</option>
+                  <option value="completed-milestones">All Milestones Complete</option>
+                </select>
+              </div>
+
+              <div class="filter-group filter-actions">
+                <button id="apply-filters" class="btn btn-primary">Apply Filters</button>
+                <button id="clear-filters" class="btn btn-secondary">Clear All</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sort Menu (Initially Hidden) -->
+      <div id="sort-menu" class="sort-menu" style="display: none;">
+        <div class="sort-option" data-field="title" data-direction="asc">
+          <span class="sort-label">Title (A-Z)</span>
+          <span class="sort-indicator"></span>
+        </div>
+        <div class="sort-option" data-field="title" data-direction="desc">
+          <span class="sort-label">Title (Z-A)</span>
+          <span class="sort-indicator"></span>
+        </div>
+        <div class="sort-option" data-field="status" data-direction="asc">
+          <span class="sort-label">Status</span>
+          <span class="sort-indicator"></span>
+        </div>
+        <div class="sort-option" data-field="priority" data-direction="desc">
+          <span class="sort-label">Priority (High to Low)</span>
+          <span class="sort-indicator"></span>
+        </div>
+        <div class="sort-option" data-field="dueDate" data-direction="asc">
+          <span class="sort-label">Due Date (Earliest First)</span>
+          <span class="sort-indicator"></span>
+        </div>
+        <div class="sort-option" data-field="dueDate" data-direction="desc">
+          <span class="sort-label">Due Date (Latest First)</span>
+          <span class="sort-indicator"></span>
+        </div>
+        <div class="sort-option" data-field="progress" data-direction="desc">
+          <span class="sort-label">Progress (High to Low)</span>
+          <span class="sort-indicator"></span>
+        </div>
+        <div class="sort-option" data-field="progress" data-direction="asc">
+          <span class="sort-label">Progress (Low to High)</span>
+          <span class="sort-indicator"></span>
+        </div>
+        <div class="sort-option" data-field="createdAt" data-direction="desc">
+          <span class="sort-label">Recently Created</span>
+          <span class="sort-indicator"></span>
+        </div>
+        <div class="sort-option" data-field="updatedAt" data-direction="desc">
+          <span class="sort-label">Recently Updated</span>
+          <span class="sort-indicator"></span>
+        </div>
+      </div>
+
+      <!-- Active Filters Display -->
+      <div id="active-filters" class="active-filters" style="display: none;">
+        <span class="active-filters-label">Active Filters:</span>
+        <div id="active-filter-tags" class="filter-tags"></div>
+        <button id="clear-all-filters" class="btn-link">Clear All</button>
       </div>
     </section>
 
     <!-- Tabs -->
     <div class="poam-tabs">
       <button class="tab-btn active" data-tab="poams-tab">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
-        </svg>
+        <span class="tab-icon"></span>
         POAMs
       </button>
       <button class="tab-btn" data-tab="milestones-tab">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-        </svg>
+        <span class="tab-icon"></span>
         Milestones
       </button>
     </div>
@@ -66,22 +213,16 @@
         <table id="poamsTable" class="data-table">
           <thead>
             <tr>
-              <th data-key="vulnId" class="sortable">
-                Vuln ID
-                <span class="sort-indicator">↕</span>
-              </th>
               <th data-key="title" class="sortable">
-                Title
+                POAM Title
                 <span class="sort-indicator">↕</span>
               </th>
-              <th data-key="severity" class="sortable">
-                Severity
-                <span class="sort-indicator">↕</span>
-              </th>
-              <th data-key="nistControls">NIST Control(s)</th>
-              <th data-key="ccis">CCI(s)</th>
               <th data-key="status" class="sortable">
                 Status
+                <span class="sort-indicator">↕</span>
+              </th>
+              <th data-key="priority" class="sortable">
+                Priority
                 <span class="sort-indicator">↕</span>
               </th>
               <th data-key="assignee" class="sortable">
@@ -97,6 +238,7 @@
                 <span class="sort-indicator">↕</span>
               </th>
               <th>Milestones</th>
+              <th data-key="nistControls">NIST Controls</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -132,10 +274,6 @@
                 Status
                 <span class="sort-indicator">↕</span>
               </th>
-              <th data-key="progress" class="sortable">
-                Progress
-                <span class="sort-indicator">↕</span>
-              </th>
               <th>Notes</th>
               <th>Actions</th>
             </tr>
@@ -151,6 +289,136 @@
     </section>
   </main>
 
+  <!-- Edit POAM Modal -->
+  <div id="editPOAMModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit POAM</h3>
+        <button class="modal-close" onclick="poamManager.closeEditPOAMModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editPOAMForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-poam-title">Title *</label>
+              <input type="text" id="edit-poam-title" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-poam-assignee">Assignee</label>
+              <input type="text" id="edit-poam-assignee" class="form-control">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-poam-status">Status</label>
+              <select id="edit-poam-status" class="form-control">
+                <option value="open">Open</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="on-hold">On Hold</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="edit-poam-priority">Priority</label>
+              <select id="edit-poam-priority" class="form-control">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-poam-due">Due Date</label>
+              <input type="date" id="edit-poam-due" class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="edit-poam-progress">Progress</label>
+              <input type="number" id="edit-poam-progress" class="form-control" min="0" max="100" readonly>
+              <small class="text-muted">Auto-calculated from milestones</small>
+            </div>
+          </div>
+          <div class="form-row full-width">
+            <div class="form-group">
+              <label for="edit-poam-description">Description</label>
+              <textarea id="edit-poam-description" class="form-control" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="form-row full-width">
+            <div class="form-group">
+              <label for="edit-poam-nist">NIST Controls</label>
+              <input type="text" id="edit-poam-nist" class="form-control">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="poamManager.closeEditPOAMModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="poamManager.saveEditedPOAM()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Milestone Modal -->
+  <div id="editMilestoneModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Milestone</h3>
+        <button class="modal-close" onclick="poamManager.closeEditMilestoneModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editMilestoneForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-milestone-title">Title *</label>
+              <input type="text" id="edit-milestone-title" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-milestone-status">Status</label>
+              <select id="edit-milestone-status" class="form-control">
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="on-hold">On Hold</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-milestone-due">Due Date</label>
+              <input type="date" id="edit-milestone-due" class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="edit-milestone-completed">Completed</label>
+              <div style="padding-top: 8px;">
+                <input type="checkbox" id="edit-milestone-completed" style="width: 20px; height: 20px; cursor: pointer;">
+                <small class="text-muted" style="margin-left: 10px;">Check if milestone is completed</small>
+              </div>
+            </div>
+          </div>
+          <div class="form-row full-width">
+            <div class="form-group">
+              <label for="edit-milestone-description">Description</label>
+              <textarea id="edit-milestone-description" class="form-control" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="form-row full-width">
+            <div class="form-group">
+              <label for="edit-milestone-notes">Notes</label>
+              <textarea id="edit-milestone-notes" class="form-control" rows="3"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="poamManager.closeEditMilestoneModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="poamManager.saveEditedMilestone()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Core Systems (load first) -->
   <script src="../scripts/app-state.js"></script>
   <script src="../scripts/data-manager.js"></script>
@@ -163,37 +431,206 @@
   
   <!-- Navigation and Application-specific UI components -->
   <script src="../components/navigation.js"></script>
-  <script src="../components/theme-manager.js"></script>
   <script src="../components/status-messages.js"></script>
   
   <!-- POAM Management functionality -->
   <script src="../scripts/poam-manager.js"></script>
+  <script src="../scripts/export-import-manager.js"></script>
   
   <!-- Application initialization -->
   <script>
     let poamManager;
-    
+
+    // Close modals when clicking outside or pressing escape
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        if (document.getElementById('editPOAMModal').style.display === 'block') {
+          poamManager.closeEditPOAMModal();
+        }
+        if (document.getElementById('editMilestoneModal').style.display === 'block') {
+          poamManager.closeEditMilestoneModal();
+        }
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      const poamModal = document.getElementById('editPOAMModal');
+      const milestoneModal = document.getElementById('editMilestoneModal');
+
+      if (event.target === poamModal) {
+        poamManager.closeEditPOAMModal();
+      }
+      if (event.target === milestoneModal) {
+        poamManager.closeEditMilestoneModal();
+      }
+    });
+
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         // Initialize the application using the new state manager
         await AppState.initialize();
-        
+
         // Initialize POAM manager
         const dataManager = AppState.state.dataManager;
         const statusMessages = AppState.getComponent('statusMessages');
-        
+
         if (window.POAMManager) {
           poamManager = new POAMManager(dataManager, statusMessages);
           window.poamManager = poamManager; // Make it globally accessible for onclick handlers
         }
-        
+
+        // Add proper icons to UI elements
+        initializeIcons();
+
         console.log('POAM Management Page ready!');
-        
+
       } catch (error) {
         console.error('Failed to initialize POAM management page:', error);
         // Error handling is managed by AppState
       }
     });
+
+    // Initialize proper icons for UI elements
+    function initializeIcons() {
+      if (!window.Icons) return;
+
+      // Add button icons
+      const addPoamBtn = document.getElementById('add-poam-btn');
+      const addIcon = addPoamBtn?.querySelector('.btn-icon');
+      if (addIcon && window.Icons) {
+        const icon = window.Icons.create('plus', { size: 16, strokeWidth: 2 });
+        if (icon) addIcon.appendChild(icon);
+      }
+
+      const exportBtn = document.getElementById('export-btn');
+      const exportIcon = exportBtn?.querySelector('.btn-icon');
+      if (exportIcon && window.Icons) {
+        const icon = window.Icons.create('download', { size: 16, strokeWidth: 2 });
+        if (icon) exportIcon.appendChild(icon);
+      }
+
+      // Add tab icons
+      const poamsTab = document.querySelector('[data-tab="poams-tab"] .tab-icon');
+      if (poamsTab && window.Icons) {
+        const icon = window.Icons.create('file-text', { size: 16, strokeWidth: 2 });
+        if (icon) poamsTab.appendChild(icon);
+      }
+
+      const milestonesTab = document.querySelector('[data-tab="milestones-tab"] .tab-icon');
+      if (milestonesTab && window.Icons) {
+        const icon = window.Icons.create('target', { size: 16, strokeWidth: 2 });
+        if (icon) milestonesTab.appendChild(icon);
+      }
+
+      // Add search and filter icons
+      const searchIcon = document.querySelector('.search-icon');
+      if (searchIcon && window.Icons) {
+        const icon = window.Icons.create('search', { size: 16, strokeWidth: 2 });
+        if (icon) searchIcon.appendChild(icon);
+      }
+
+      const clearIcon = document.querySelector('.clear-icon');
+      if (clearIcon && window.Icons) {
+        const icon = window.Icons.create('x-circle', { size: 14, strokeWidth: 2 });
+        if (icon) clearIcon.appendChild(icon);
+      }
+
+      const filterIcon = document.querySelector('.filter-icon');
+      if (filterIcon && window.Icons) {
+        const icon = window.Icons.create('filter', { size: 16, strokeWidth: 2 });
+        if (icon) filterIcon.appendChild(icon);
+      }
+
+      const sortIcon = document.querySelector('.sort-icon');
+      if (sortIcon && window.Icons) {
+        const icon = window.Icons.create('sort-asc', { size: 16, strokeWidth: 2 });
+        if (icon) sortIcon.appendChild(icon);
+      }
+    }
+
+
+    // Handle bulk POAM creation from imported vulnerabilities
+    async function handleBulkPoamCreation(vulnerabilities, exportImportManager, dataManager, statusMessages) {
+      try {
+        // Filter for eligible vulnerabilities
+        const eligibleVulns = vulnerabilities.filter(v => v.availableForPoam);
+
+        if (eligibleVulns.length === 0) {
+          alert('No eligible vulnerabilities found for POAM creation.');
+          return;
+        }
+
+        // Show progress dialog
+        const progressDialog = document.createElement('div');
+        progressDialog.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: white;
+          padding: 20px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+          z-index: 10000;
+          min-width: 300px;
+          text-align: center;
+        `;
+        progressDialog.innerHTML = `
+          <h3>Creating POAMs...</h3>
+          <p id="progress-text">Initializing...</p>
+          <div style="background: #f0f0f0; height: 20px; border-radius: 10px; overflow: hidden;">
+            <div id="progress-bar" style="background: #007bff; height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+        `;
+        document.body.appendChild(progressDialog);
+
+        const progressText = progressDialog.querySelector('#progress-text');
+        const progressBar = progressDialog.querySelector('#progress-bar');
+
+        // Batch create POAMs
+        const result = await exportImportManager.batchCreatePoamsFromImport(
+          eligibleVulns,
+          dataManager,
+          (status) => {
+            const percentage = (status.current / status.total) * 100;
+            progressText.textContent = `Processing ${status.current} of ${status.total}: ${status.vulnerability}`;
+            progressBar.style.width = `${percentage}%`;
+          }
+        );
+
+        // Remove progress dialog
+        document.body.removeChild(progressDialog);
+
+        // Show results
+        let message = `POAM Creation Results:\n\n`;
+        message += `Total processed: ${result.total}\n`;
+        message += `POAMs created: ${result.created}\n`;
+        message += `Skipped (already exist): ${result.skipped}\n`;
+
+        if (result.errors.length > 0) {
+          message += `Errors: ${result.errors.length}\n\n`;
+          message += 'First few errors:\n';
+          result.errors.slice(0, 3).forEach(error => {
+            message += `- ${error.vulnerability}: ${error.error}\n`;
+          });
+        }
+
+        alert(message);
+
+        if (statusMessages) {
+          statusMessages.showSuccess(`Created ${result.created} POAMs from imported vulnerabilities`);
+        }
+
+      } catch (error) {
+        console.error('Bulk POAM creation failed:', error);
+        alert(`Bulk POAM creation failed: ${error.message}`);
+
+        if (statusMessages) {
+          statusMessages.showError(`Bulk POAM creation failed: ${error.message}`);
+        }
+      }
+    }
   </script>
 </body>
 </html>

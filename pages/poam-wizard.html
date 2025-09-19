@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>POAM Creation Wizard - Cybersecurity Management Suite</title>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+  <!-- Navigation will be inserted by navigation.js -->
+
+  <header class="page-header">
+    <div class="header-content">
+      <h1>POAM Creation Wizard</h1>
+      <p>Create Plans of Action & Milestones from imported CCI/STIG mappings</p>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div class="wizard-container">
+      <!-- Wizard Steps -->
+      <div class="wizard-steps">
+        <div class="wizard-step active" data-step="1">
+          <div class="step-number">1</div>
+          <div class="step-title">Import Mappings</div>
+        </div>
+        <div class="wizard-step" data-step="2">
+          <div class="step-number">2</div>
+          <div class="step-title">Select NIST Controls</div>
+        </div>
+        <div class="wizard-step" data-step="3">
+          <div class="step-number">3</div>
+          <div class="step-title">Select Vulnerabilities</div>
+        </div>
+        <div class="wizard-step" data-step="4">
+          <div class="step-number">4</div>
+          <div class="step-title">Configure POAM</div>
+        </div>
+        <div class="wizard-step" data-step="5">
+          <div class="step-number">5</div>
+          <div class="step-title">Review & Create</div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: 20%"></div>
+      </div>
+
+      <!-- Wizard Content -->
+      <div class="wizard-content">
+        <!-- Step 1: Import Mappings -->
+        <div class="wizard-step-content active" data-step="1">
+          <h2>Step 1: Import CCI/STIG Mappings</h2>
+          <p>Import a previously exported CCI/STIG mapping file to begin creating POAMs.</p>
+
+          <div class="import-area" id="importArea">
+            <div class="import-icon">📁</div>
+            <h3>Drop your mapping file here or click to browse</h3>
+            <p>Accepts JSON and CSV files exported from STIG Analysis</p>
+            <input type="file" id="importFile" accept=".json,.csv" style="display: none;">
+          </div>
+
+          <div id="importResults" style="display: none; margin-top: 20px;">
+            <div class="summary-section">
+              <h4>Import Results</h4>
+              <div class="summary-item">
+                <span>Total Vulnerabilities:</span>
+                <span id="totalVulns">0</span>
+              </div>
+              <div class="summary-item">
+                <span>Eligible for POAM:</span>
+                <span id="eligibleVulns">0</span>
+              </div>
+              <div class="summary-item">
+                <span>NIST Controls Found:</span>
+                <span id="nistControlsFound">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Select NIST Controls -->
+        <div class="wizard-step-content" data-step="2">
+          <h2>Step 2: Select NIST Controls</h2>
+          <p>Choose the NIST controls for which you want to create POAMs.</p>
+
+          <div class="form-row">
+            <div>
+              <button class="btn btn-secondary" id="selectAllControls">Select All</button>
+              <button class="btn btn-secondary" id="selectNoneControls">Select None</button>
+            </div>
+            <div style="text-align: right;">
+              <span id="selectedControlsCount">0 controls selected</span>
+            </div>
+          </div>
+
+          <div class="nist-controls-grid" id="nistControlsGrid">
+            <!-- Controls will be populated here -->
+          </div>
+        </div>
+
+        <!-- Step 3: Select Vulnerabilities -->
+        <div class="wizard-step-content" data-step="3">
+          <h2>Step 3: Select Vulnerabilities</h2>
+          <p>Review and select vulnerabilities that need remediation (Open, Failed, Not Reviewed status only).</p>
+
+          <div id="vulnerabilitySelectionContainer">
+            <!-- Vulnerability selection will be populated here -->
+          </div>
+        </div>
+
+        <!-- Step 4: Configure POAM -->
+        <div class="wizard-step-content" data-step="4">
+          <h2>Step 4: Configure POAM Details</h2>
+          <p>Set up the POAM information and automatically generated milestones.</p>
+
+          <form id="poamConfigForm">
+            <div class="poam-form-section">
+              <h3>Basic Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="poamTitle">POAM Title</label>
+                  <input type="text" id="poamTitle" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="poamAssignee">Assignee</label>
+                  <input type="text" id="poamAssignee" class="form-control">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="poamDueDate">Due Date</label>
+                  <input type="date" id="poamDueDate" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="poamPriority">Priority</label>
+                  <select id="poamPriority" class="form-control">
+                    <option value="high">High</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row full-width">
+                <div class="form-group">
+                  <label for="poamDescription">Description</label>
+                  <textarea id="poamDescription" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="poam-form-section">
+              <h3>Milestone Configuration</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="milestoneSpacing">Days Between Milestones</label>
+                  <input type="number" id="milestoneSpacing" class="form-control" value="2" min="1">
+                </div>
+                <div class="form-group">
+                  <label for="startDate">Milestone Start Date</label>
+                  <input type="date" id="startDate" class="form-control">
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary" id="regenerateMilestones">Regenerate Milestones</button>
+            </div>
+
+            <div class="poam-form-section">
+              <h3>Generated Milestones</h3>
+              <div id="milestonesContainer">
+                <!-- Milestones will be generated here -->
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Step 5: Review & Create -->
+        <div class="wizard-step-content" data-step="5">
+          <h2>Step 5: Review & Create POAM</h2>
+          <p>Review your POAM configuration before creating it.</p>
+
+          <div class="summary-section">
+            <h4>POAM Summary</h4>
+            <div id="poamSummary">
+              <!-- Summary will be populated here -->
+            </div>
+          </div>
+
+          <div class="summary-section">
+            <h4>Selected NIST Controls</h4>
+            <div id="controlsSummary">
+              <!-- Controls summary will be populated here -->
+            </div>
+          </div>
+
+          <div class="summary-section">
+            <h4>Milestones Schedule</h4>
+            <div id="milestonesSummary">
+              <!-- Milestones summary will be populated here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wizard Actions -->
+      <div class="wizard-actions">
+        <button class="btn btn-secondary" id="prevButton" style="display: none;">Previous</button>
+        <div>
+          <button class="btn btn-secondary" id="cancelButton" onclick="window.history.back()">Cancel</button>
+          <button class="btn btn-primary" id="nextButton">Next</button>
+          <button class="btn btn-primary" id="createButton" style="display: none;">Create POAM</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Core Systems -->
+  <script src="../scripts/app-state.js"></script>
+  <script src="../scripts/data-manager.js"></script>
+  <script src="../scripts/export-import-manager.js"></script>
+
+  <!-- UI Framework and Components -->
+  <link rel="stylesheet" href="../components/ui-components.css">
+  <script src="../components/ui-framework.js"></script>
+  <script src="../components/navigation.js"></script>
+  <script src="../components/status-messages.js"></script>
+
+  <!-- POAM Wizard Script -->
+  <script src="../scripts/poam-wizard.js"></script>
+
+  <!-- Application initialization -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        console.log('🧙‍♂️ Initializing POAM Wizard...');
+
+        // Initialize the application state
+        await AppState.initialize();
+
+        // Initialize the POAM wizard
+        if (window.POAMWizard) {
+          const wizard = new POAMWizard();
+          await wizard.initialize();
+          window.poamWizard = wizard;
+        }
+
+        console.log('✅ POAM Wizard ready!');
+
+      } catch (error) {
+        console.error('❌ Failed to initialize POAM wizard:', error);
+
+        // Show user-friendly error
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+          position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+          background: #dc3545; color: white; padding: 15px 20px;
+          border-radius: 5px; z-index: 10000; max-width: 500px;
+        `;
+        errorDiv.innerHTML = `
+          <strong>⚠️ Wizard Error</strong><br>
+          Failed to initialize POAM wizard. Please refresh the page.<br>
+          <small>Error: ${error.message}</small>
+        `;
+        document.body.appendChild(errorDiv);
+      }
+    });
+  </script>
+</body>
+</html>

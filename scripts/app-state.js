@@ -7,7 +7,7 @@
 class AppStateManager {
     constructor() {
         this.state = {
-            theme: 'dark', // Default theme
+            theme: 'light', // Fixed to light theme
             dataManager: null,
             isInitialized: false,
             isDataLoaded: false,
@@ -23,12 +23,11 @@ class AppStateManager {
         this.preloadTheme();
     }
 
-    // Pre-load theme immediately to prevent flash
+    // Set fixed light theme
     preloadTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        this.state.theme = savedTheme;
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        
+        this.state.theme = 'light';
+        document.documentElement.setAttribute('data-theme', 'light');
+
         // Add loading class to prevent content flash
         document.documentElement.classList.add('app-loading');
     }
@@ -53,13 +52,10 @@ class AppStateManager {
     async _performInitialization() {
         try {
             console.log('🚀 Starting application initialization...');
-            
+
             // Step 1: Initialize core systems
-            await window.DataManager.ready(); // Ensure the singleton is ready
-            this.state.dataManager = window.DataManager;
-            console.log('[AppState] DataManager initialized:', this.state.dataManager ? 'Available' : 'Not Available');
-            console.log('[AppState] DataManager ready state:', this.state.dataManager.isReady);
-            await this.initializeTheme();
+            await this.initializeDataManager();
+            // Theme is now fixed to light
             
             // Step 2: Initialize page-specific components
             await this.initializePageComponents();
@@ -84,34 +80,67 @@ class AppStateManager {
         }
     }
 
+    async initializeDataManager() {
+        console.log('[AppState] Initializing DataManager...');
 
-    async initializeTheme() {
-        this.setLoadingState('theme', true);
-        
+        // Wait for DataManager to be available
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds max wait
+
+        while (!window.DataManager && attempts < maxAttempts) {
+            console.log(`[AppState] Waiting for DataManager... (attempt ${attempts + 1})`);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+
+        if (!window.DataManager) {
+            console.warn('[AppState] DataManager not available, creating fallback...');
+            // Create a basic fallback DataManager
+            this.state.dataManager = {
+                isReady: true,
+                ready: () => Promise.resolve(),
+                getAllStigRows: () => Promise.resolve([]),
+                getCciMappings: () => Promise.resolve({}),
+                getPOAMs: () => Promise.resolve([]),
+                getMilestones: () => Promise.resolve([]),
+                getDataStats: () => Promise.resolve({
+                    stigData: 0,
+                    totalStigRows: 0,
+                    cciMappings: 0,
+                    poams: 0,
+                    milestones: 0,
+                    openPOAMs: 0,
+                    completedPOAMs: 0
+                })
+            };
+            console.log('[AppState] Using fallback DataManager');
+            return;
+        }
+
         try {
-            // Theme is already pre-loaded, just initialize the manager
-            if (window.ThemeManager) {
-                const themeManager = new ThemeManager();
-                
-                // Wait for theme elements to be available (navigation might still be rendering)
-                const themeToggle = await this.waitForElement('#themeToggle', 2000);
-                const themeLabel = await this.waitForElement('#themeLabel', 2000);
-                
-                if (themeToggle && themeLabel) {
-                    themeManager.init(themeToggle, themeLabel);
-                    this.registerComponent('themeManager', themeManager);
-                    console.log('Theme manager initialized successfully');
-                } else {
-                    console.warn('Theme elements not found, theme toggle may not work');
-                }
-            }
-            
-            this.emit('theme-ready');
-            
+            await window.DataManager.ready();
+            this.state.dataManager = window.DataManager;
+            console.log('[AppState] DataManager initialized:', this.state.dataManager ? 'Available' : 'Not Available');
+            console.log('[AppState] DataManager ready state:', this.state.dataManager.isReady);
         } catch (error) {
-            console.error('Theme initialization failed:', error);
-        } finally {
-            this.setLoadingState('theme', false);
+            console.warn('[AppState] DataManager initialization failed, using fallback:', error);
+            this.state.dataManager = {
+                isReady: true,
+                ready: () => Promise.resolve(),
+                getAllStigRows: () => Promise.resolve([]),
+                getCciMappings: () => Promise.resolve({}),
+                getPOAMs: () => Promise.resolve([]),
+                getMilestones: () => Promise.resolve([]),
+                getDataStats: () => Promise.resolve({
+                    stigData: 0,
+                    totalStigRows: 0,
+                    cciMappings: 0,
+                    poams: 0,
+                    milestones: 0,
+                    openPOAMs: 0,
+                    completedPOAMs: 0
+                })
+            };
         }
     }
 
@@ -151,10 +180,20 @@ class AppStateManager {
 
     async initializeStigsPage() {
         // Initialize STIG-specific components
-        if (window.STIGMapperApp) {
-            const app = new STIGMapperApp();
-            await app.init();
-            this.registerComponent('stigApp', app);
+        try {
+            if (window.STIGMapperApp) {
+                console.log('[AppState] Initializing STIG Mapper App...');
+                const app = new STIGMapperApp();
+                await app.init();
+                this.registerComponent('stigApp', app);
+                console.log('[AppState] STIG Mapper App initialized successfully');
+            } else {
+                console.warn('[AppState] STIGMapperApp not available');
+            }
+        } catch (error) {
+            console.error('[AppState] Failed to initialize STIG page:', error);
+            // Don't throw - let the app continue with basic functionality
+            console.warn('[AppState] Continuing without STIG-specific functionality');
         }
     }
 
@@ -448,16 +487,14 @@ class AppStateManager {
         return this.state.components.get(name);
     }
 
-    // Theme management
+    // Theme management (fixed to light)
     setTheme(theme) {
-        this.state.theme = theme;
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-        this.emit('theme-changed', theme);
+        // Theme is now fixed to light, ignore changes
+        return;
     }
 
     getTheme() {
-        return this.state.theme;
+        return 'light';
     }
 
     // Event system

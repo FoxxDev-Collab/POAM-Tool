@@ -8,22 +8,85 @@
 
 class DataManager {
     constructor() {
+        // Check if there's already a DataManager instance with data
+        if (window._dataManagerInstance && window._dataManagerInstance.currentData) {
+            console.log('[DataManager] Reusing existing DataManager instance with data');
+            return window._dataManagerInstance;
+        }
+
         this.currentData = null; // Currently loaded data file
         this.eventBus = new EventTarget();
         this.isReady = false;
-        
+
+        // Store this instance globally
+        window._dataManagerInstance = this;
+
         this.init();
     }
 
     async init() {
         try {
-            console.log('[DataManager] Initializing simplified file-based data management...');
+            console.log('[DataManager] Initializing data management...');
+
+            // Force restore from localStorage if data exists
+            this.restoreFromStorage();
+
             this.isReady = true;
             this.emit('ready');
-            console.log('[DataManager] Initialized successfully');
+            console.log('[DataManager] Initialized with data:', {
+                hasData: !!this.currentData,
+                poams: this.currentData?.poams?.length || 0,
+                vulnerabilities: this.currentData?.vulnerabilities?.length || 0,
+                milestones: this.currentData?.milestones?.length || 0
+            });
         } catch (error) {
             console.error('[DataManager] Initialization failed:', error);
             throw error;
+        }
+    }
+
+    // Force restore data from localStorage
+    restoreFromStorage() {
+        try {
+            const savedData = localStorage.getItem('cybersec-suite-data');
+            if (savedData && savedData !== 'null' && savedData !== 'undefined') {
+                this.currentData = JSON.parse(savedData);
+                console.log('[DataManager] Data restored from localStorage successfully');
+                return true;
+            }
+        } catch (error) {
+            console.error('[DataManager] Failed to restore from localStorage:', error);
+        }
+        return false;
+    }
+
+    // Force save data to localStorage with verification
+    saveToStorage() {
+        try {
+            if (!this.currentData) {
+                console.warn('[DataManager] No data to save');
+                return false;
+            }
+
+            const dataString = JSON.stringify(this.currentData);
+            localStorage.setItem('cybersec-suite-data', dataString);
+
+            // Verify the save worked
+            const verification = localStorage.getItem('cybersec-suite-data');
+            if (verification === dataString) {
+                console.log('[DataManager] Data saved to localStorage successfully:', {
+                    poams: this.currentData.poams?.length || 0,
+                    vulnerabilities: this.currentData.vulnerabilities?.length || 0,
+                    milestones: this.currentData.milestones?.length || 0
+                });
+                return true;
+            } else {
+                console.error('[DataManager] localStorage save verification failed');
+                return false;
+            }
+        } catch (error) {
+            console.error('[DataManager] Failed to save to localStorage:', error);
+            return false;
         }
     }
 
@@ -33,6 +96,13 @@ class DataManager {
             const text = await file.text();
             const data = JSON.parse(text);
             this.currentData = data;
+
+            // Force save to localStorage with verification
+            const saved = this.saveToStorage();
+            if (!saved) {
+                console.warn('[DataManager] Failed to save loaded file data to localStorage');
+            }
+
             console.log('[DataManager] Loaded data from file:', {
                 filename: file.name,
                 vulnerabilities: data.vulnerabilities?.length || 0,
@@ -123,6 +193,94 @@ class DataManager {
         return consolidatedData;
     }
 
+    // Legacy method for compatibility with existing STIG app
+    async compileStigData(stigRows, loadedFiles, cciMappings = null) {
+        try {
+            console.log('[DataManager] Compiling STIG data for compatibility...');
+
+            // Use existing method to create consolidated data
+            const consolidatedData = this.createConsolidatedData(
+                stigRows,
+                cciMappings || this.currentData?.cciMappings || {},
+                loadedFiles
+            );
+
+            // Store as current data
+            this.currentData = consolidatedData;
+
+            // Force save to localStorage with verification
+            const saved = this.saveToStorage();
+            if (!saved) {
+                console.warn('[DataManager] Failed to save STIG data to localStorage');
+            }
+
+            console.log('[DataManager] STIG data compiled successfully');
+            return consolidatedData;
+
+        } catch (error) {
+            console.error('[DataManager] Failed to compile STIG data:', error);
+            throw error;
+        }
+    }
+
+    // Legacy method for CCI mappings compilation
+    async compileCciMappings(cciMappings, sourceFileName = 'custom-cci.xml') {
+        try {
+            console.log('[DataManager] Compiling CCI mappings for compatibility...');
+
+            // Store CCI mappings in current data
+            if (!this.currentData) {
+                this.currentData = {
+                    metadata: {
+                        version: "1.0",
+                        type: "consolidated-stig-data",
+                        createdAt: new Date().toISOString(),
+                        lastUpdated: new Date().toISOString()
+                    },
+                    vulnerabilities: [],
+                    cciMappings: {},
+                    files: [],
+                    poams: [],
+                    milestones: []
+                };
+            }
+
+            this.currentData.cciMappings = cciMappings || {};
+            this.currentData.metadata.lastUpdated = new Date().toISOString();
+            this.currentData.metadata.cciMappingsSource = sourceFileName;
+            this.currentData.metadata.totalCciMappings = Object.keys(cciMappings || {}).length;
+
+            console.log('[DataManager] CCI mappings compiled successfully');
+            return this.currentData.cciMappings;
+
+        } catch (error) {
+            console.error('[DataManager] Failed to compile CCI mappings:', error);
+            throw error;
+        }
+    }
+
+    // Legacy method to get STIG data in expected format
+    async getStigData() {
+        if (!this.currentData) {
+            return {
+                metadata: {
+                    version: "1.0",
+                    lastUpdated: null,
+                    totalFiles: 0,
+                    totalRows: 0
+                },
+                files: [],
+                rows: []
+            };
+        }
+
+        return {
+            metadata: this.currentData.metadata,
+            files: this.currentData.files || [],
+            rows: this.currentData.vulnerabilities || []
+        };
+    }
+
     // Enhance CCI mappings with NIST control information
     enhanceCciMappings(ccis, cciMappings) {
         if (!ccis || !cciMappings) return [];
@@ -141,7 +299,20 @@ class DataManager {
     // Add POAM to current data and return updated data structure
     addPoamToData(poamData) {
         if (!this.currentData) {
-            throw new Error('No data file loaded. Please load a consolidated data file first.');
+            // Initialize empty data structure if none exists
+            this.currentData = {
+                metadata: {
+                    version: "1.0",
+                    type: "consolidated-stig-data",
+                    createdAt: new Date().toISOString(),
+                    lastUpdated: new Date().toISOString()
+                },
+                vulnerabilities: [],
+                cciMappings: {},
+                files: [],
+                poams: [],
+                milestones: []
+            };
         }
 
         // Add POAM with unique ID
@@ -154,19 +325,38 @@ class DataManager {
 
         this.currentData.poams = this.currentData.poams || [];
         this.currentData.poams.push(newPoam);
-        
+
         // Update metadata
         this.currentData.metadata.totalPoams = this.currentData.poams.length;
         this.currentData.metadata.lastUpdated = new Date().toISOString();
 
+        // Force save to localStorage with verification
+        const saved = this.saveToStorage();
+        if (!saved) {
+            throw new Error('Failed to save POAM data to localStorage');
+        }
+
         console.log('[DataManager] Added POAM to current data:', newPoam.id);
-        return this.currentData;
+        return newPoam;
     }
 
     // Add milestone to current data
     addMilestoneToData(milestoneData) {
         if (!this.currentData) {
-            throw new Error('No data file loaded. Please load a consolidated data file first.');
+            // Initialize empty data structure if none exists
+            this.currentData = {
+                metadata: {
+                    version: "1.0",
+                    type: "consolidated-stig-data",
+                    createdAt: new Date().toISOString(),
+                    lastUpdated: new Date().toISOString()
+                },
+                vulnerabilities: [],
+                cciMappings: {},
+                files: [],
+                poams: [],
+                milestones: []
+            };
         }
 
         const newMilestone = {
@@ -178,13 +368,19 @@ class DataManager {
 
         this.currentData.milestones = this.currentData.milestones || [];
         this.currentData.milestones.push(newMilestone);
-        
+
         // Update metadata
         this.currentData.metadata.totalMilestones = this.currentData.milestones.length;
         this.currentData.metadata.lastUpdated = new Date().toISOString();
 
+        // Force save to localStorage with verification
+        const saved = this.saveToStorage();
+        if (!saved) {
+            throw new Error('Failed to save milestone data to localStorage');
+        }
+
         console.log('[DataManager] Added milestone to current data:', newMilestone.id);
-        return this.currentData;
+        return newMilestone;
     }
 
     // Get current data (for compatibility with existing code)
@@ -205,11 +401,18 @@ class DataManager {
     }
 
     async getPOAMs() {
-        if (!this.currentData || !this.currentData.poams) {
-            console.log('[DataManager] No POAMs in current data');
-            return [];
+        // Always try to restore from localStorage first
+        if (!this.currentData) {
+            this.restoreFromStorage();
         }
-        return this.currentData.poams;
+
+        console.log('[DataManager] getPOAMs called - currentData state:', {
+            hasCurrentData: !!this.currentData,
+            poams: this.currentData?.poams?.length || 0,
+            localStorageExists: localStorage.getItem('cybersec-suite-data') !== null
+        });
+
+        return this.currentData?.poams || [];
     }
 
     async getMilestones(poamId = null) {
@@ -287,68 +490,8 @@ class DataManager {
 }
 
 // Create and export a single, initialized instance of the DataManager
-const dataManagerInstance = new DataManager();
-
-// Export the singleton instance
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = dataManagerInstance;
-} else {
-    window.DataManager = dataManagerInstance;
-}
-
-    // Clear cache to force reload
-    clearCache() {
-        this.cache = {
-            stigData: null,
-            cciMappings: null,
-            poams: null
-        };
-        console.log('[DataManager] Cache cleared');
-    }
-
-    // Event system
-    emit(eventName, data) {
-        this.eventBus.dispatchEvent(new CustomEvent(eventName, { detail: data }));
-    }
-
-    on(eventName, callback) {
-        this.eventBus.addEventListener(eventName, callback);
-    }
-
-    off(eventName, callback) {
-        this.eventBus.removeEventListener(eventName, callback);
-    }
-
-    // Wait for initialization
-    async ready() {
-        if (this.isReady) return Promise.resolve();
-        
-        return new Promise(resolve => {
-            this.on('ready', resolve);
-        });
-    }
-
-    // Utility method to generate data files for manual placement
-    async generateDataFiles() {
-        console.log('[DataManager] Generating all data files for manual placement...');
-        
-        // Generate empty/default files
-        const files = [
-            { name: this.files.stigData, data: this.getDefaultStructure('stig-data.json') },
-            { name: this.files.cciMappings, data: this.getDefaultStructure('cci-mappings.json') },
-            { name: this.files.poams, data: this.getDefaultStructure('poams.json') }
-        ];
-
-        for (const file of files) {
-            await this.saveJsonFile(file.name, file.data);
-        }
-
-        console.log('[DataManager] All data files generated for download');
-    }
-}
-
-// Create and export a single, initialized instance of the DataManager
-const dataManagerInstance = new DataManager();
+// Use existing instance if available, otherwise create new one
+const dataManagerInstance = window._dataManagerInstance || new DataManager();
 
 // Export the singleton instance
 if (typeof module !== 'undefined' && module.exports) {

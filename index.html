@@ -9,102 +9,58 @@
 <body>
   <!-- Navigation will be inserted by navigation.js -->
 
-  <main class="dashboard">
-    <header class="dashboard-header">
+  <main class="app-main">
+    <header class="page-header">
       <div class="header-content">
-        <h1>Dashboard</h1>
-        <p>Overview of your cybersecurity compliance and vulnerability management</p>
+        <h1>Cybersecurity Management Suite</h1>
+        <p>STIG Analysis and POAM Management Tool</p>
       </div>
     </header>
 
-    <!-- Statistics Cards -->
-    <section class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">📊</div>
-        <div class="stat-content">
-          <h3 id="totalStigRows">0</h3>
-          <p>Total STIG Findings</p>
-          <small id="stigFilesCount">0 files imported</small>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon">📋</div>
-        <div class="stat-content">
-          <h3 id="totalPOAMs">0</h3>
-          <p>Total POAMs</p>
-          <small><span id="openPOAMs">0</span> open, <span id="completedPOAMs">0</span> completed</small>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon">🎯</div>
-        <div class="stat-content">
-          <h3 id="totalMilestones">0</h3>
-          <p>Active Milestones</p>
-          <small id="overdueMilestones">0 overdue</small>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon">🔗</div>
-        <div class="stat-content">
-          <h3 id="totalCCIs">0</h3>
-          <p>CCI Mappings</p>
-          <small>NIST control mappings</small>
-        </div>
-      </div>
-    </section>
+    <section class="instructions">
+      <div class="instructions-content">
+        <h2>How to Use This Application</h2>
 
-    <!-- Quick Actions -->
-    <section class="quick-actions">
-      <h2>Quick Actions</h2>
-      <div class="action-grid">
-        <a href="pages/stigs.html" class="action-card">
-          <div class="action-icon">🔍</div>
-          <div class="action-content">
-            <h3>Analyze STIGs</h3>
-            <p>Import and analyze STIG files to map vulnerabilities to NIST controls</p>
-          </div>
-        </a>
-        
-        <a href="pages/poams.html" class="action-card">
-          <div class="action-icon">📝</div>
-          <div class="action-content">
-            <h3>Manage POAMs</h3>
-            <p>Create and track Plans of Action & Milestones for vulnerability remediation</p>
-          </div>
-        </a>
-        
-        <div class="action-card" id="importDataCard">
-          <div class="action-icon">📥</div>
-          <div class="action-content">
-            <h3>Import Data</h3>
-            <p>Import previously exported data to restore your work</p>
-          </div>
-          <input type="file" id="importDataFile" accept=".json" style="display: none;">
-        </div>
-        
-        <div class="action-card" id="clearDataCard">
-          <div class="action-icon">🗑️</div>
-          <div class="action-content">
-            <h3>Clear All Data</h3>
-            <p>Remove all stored data and start fresh</p>
+        <div class="instruction-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Import STIG Files</h3>
+            <p>Start by navigating to the <strong>STIG Analysis</strong> page and importing your STIG CKL/CKLB files. The application will automatically parse and analyze the vulnerabilities, mapping them to NIST controls.</p>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- Recent Activity -->
-    <section class="recent-activity">
-      <h2>Recent Activity</h2>
-      <div class="activity-list" id="activityList">
-        <div class="activity-item empty">
-          <div class="activity-icon">ℹ️</div>
-          <div class="activity-content">
-            <p>No recent activity. Start by importing STIG files or creating POAMs.</p>
-            <small>Get started with the quick actions above</small>
+        <div class="instruction-step">
+          <div class="step-content">
+            <h3>Export CCI/STIG Mappings</h3>
+            <p>After analyzing your STIG files, use the <strong>"Export Mappings"</strong> button to save the CCI/STIG mappings to your local system. Choose JSON format for best compatibility with POAM creation.</p>
           </div>
+        </div>
+
+        <div class="instruction-step">
+          <div class="step-content">
+            <h3>Create POAMs with the Wizard</h3>
+            <p>Navigate to the <strong>POAM Creation Wizard</strong> to create Plans of Action & Milestones. The wizard will guide you through:</p>
+            <ul>
+              <li>Importing your exported CCI/STIG mappings</li>
+              <li>Selecting specific NIST controls</li>
+              <li>Choosing individual vulnerabilities that need remediation</li>
+              <li>Configuring automatic milestone generation</li>
+              <li>Customizing POAM details before creation</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="instruction-step">
+          <div class="step-content">
+            <h3>Manage Your POAMs</h3>
+            <p>Use the <strong>POAM Management</strong> page to view, track, and manage your created POAMs. You can monitor progress, update milestones, and export your data.</p>
+          </div>
+        </div>
+
+        <div class="workflow-note">
+          <h3>💡 Recommended Workflow</h3>
+          <p><strong>STIG Analysis → Export Mappings → POAM Wizard → POAM Management</strong></p>
+          <p>This workflow ensures all vulnerabilities are properly analyzed and only eligible items (Open, Failed, Not Reviewed) are included in POAMs.</p>
         </div>
       </div>
     </section>
@@ -117,6 +73,14 @@
   <!-- Core Systems (load first) -->
   <script src="scripts/app-state.js"></script>
   <script src="scripts/data-manager.js"></script>
+  <script>
+    // Debug script loading
+    console.log('📦 Scripts loaded - DataManager:', !!window.DataManager, 'AppState:', !!window.AppState);
+    if (window.DataManager) {
+      console.log('📦 DataManager type:', typeof window.DataManager);
+      console.log('📦 DataManager ready method:', typeof window.DataManager.ready);
+    }
+  </script>
   
   <!-- UI Framework and Components -->
   <link rel="stylesheet" href="components/ui-components.css">
@@ -126,147 +90,21 @@
   
   <!-- Navigation and UI components -->
   <script src="components/navigation.js"></script>
-  <script src="components/theme-manager.js"></script>
   <script src="components/status-messages.js"></script>
   
-  <!-- Dashboard initialization -->
+  <!-- Application initialization -->
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        // Initialize the application using the new state manager
+        console.log('🏁 Instructions page loaded');
+
+        // Initialize the application state
         await AppState.initialize();
-        
-        // Setup dashboard-specific event listeners
-        setupDashboardEventListeners();
-        
+
       } catch (error) {
-        console.error('Failed to initialize dashboard:', error);
-        // Error handling is managed by AppState
+        console.error('❌ Failed to initialize application:', error);
       }
     });
-
-    function setupDashboardEventListeners() {
-      const statusMessages = AppState.getComponent('statusMessages');
-      
-      // Export all data
-      const exportBtn = document.getElementById('exportAllBtn');
-      if (exportBtn) {
-        exportBtn.addEventListener('click', async () => {
-          try {
-            const dataManager = AppState.state.dataManager;
-            if (!dataManager || typeof dataManager.exportAllData !== 'function') {
-              throw new Error('Data export not available');
-            }
-
-            const data = await dataManager.exportAllData();
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `cybersec-suite-export-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            if (statusMessages) {
-              statusMessages.showSuccess('All data exported successfully');
-            }
-            
-          } catch (error) {
-            console.error('Export failed:', error);
-            if (statusMessages) {
-              statusMessages.showError('Failed to export data: ' + error.message);
-            }
-          }
-        });
-      }
-      
-      // Import data
-      const importCard = document.getElementById('importDataCard');
-      const importFile = document.getElementById('importDataFile');
-      
-      if (importCard && importFile) {
-        importCard.addEventListener('click', () => {
-          importFile.click();
-        });
-        
-        importFile.addEventListener('change', async (e) => {
-          const file = e.target.files[0];
-          if (!file) return;
-          
-          try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-            
-            const confirmed = confirm(
-              'This will replace all existing data. Are you sure you want to continue?'
-            );
-            
-            if (confirmed) {
-              // Note: Import functionality needs to be implemented for JSON file approach
-              // For now, show a message about manual file placement
-              throw new Error('Import functionality not yet implemented for JSON file approach. Please manually place JSON files in /data folder.');
-              await AppState.loadDashboardData();
-              
-              if (statusMessages) {
-                statusMessages.showSuccess('Data imported successfully');
-              }
-            }
-            
-          } catch (error) {
-            console.error('Import failed:', error);
-            if (statusMessages) {
-              statusMessages.showError('Failed to import data: ' + error.message);
-            }
-          }
-          
-          // Reset file input
-          e.target.value = '';
-        });
-      }
-      
-      // Clear all data
-      const clearCard = document.getElementById('clearDataCard');
-      if (clearCard) {
-        clearCard.addEventListener('click', async () => {
-          const confirmed = confirm(
-            'This will permanently delete all your data including STIG imports, POAMs, and milestones. This cannot be undone. Are you sure?'
-          );
-          
-          if (confirmed) {
-            const doubleConfirmed = confirm(
-              'Are you absolutely sure? This will delete everything and cannot be recovered.'
-            );
-            
-            if (doubleConfirmed) {
-              try {
-                const dataManager = AppState.state.dataManager;
-                if (!dataManager) {
-                  throw new Error('Data clearing not available');
-                }
-
-                // Clear cache and regenerate empty data files
-                dataManager.clearCache();
-                await dataManager.generateDataFiles();
-                await AppState.loadDashboardData();
-                
-                if (statusMessages) {
-                  statusMessages.showSuccess('All data cleared successfully');
-                }
-                
-              } catch (error) {
-                console.error('Clear data failed:', error);
-                if (statusMessages) {
-                  statusMessages.showError('Failed to clear data: ' + error.message);
-                }
-              }
-            }
-          }
-        });
-      }
-    }
   </script>
 </body>
 </html>

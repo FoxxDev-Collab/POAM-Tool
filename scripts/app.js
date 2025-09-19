@@ -43,9 +43,6 @@ class STIGMapperApp {
             cciFile: document.getElementById('cciFile'),
             cciFileName: document.getElementById('cciFileName'),
             
-            // Theme controls
-            themeToggle: document.getElementById('themeToggle'),
-            themeLabel: document.getElementById('themeLabel'),
             
             // Filter controls
             family: document.getElementById('familySelect'),
@@ -60,44 +57,49 @@ class STIGMapperApp {
             tbody: document.querySelector('#resultsTable tbody'),
             emptyState: document.getElementById('emptyState'),
             noResults: document.getElementById('noResultsState'),
-            exportBtn: document.getElementById('exportBtn')
+            exportBtn: document.getElementById('exportBtn'),
+            exportMappingsBtn: document.getElementById('exportMappingsBtn')
         };
 
-        // Validate all required elements exist
-        const missingElements = Object.entries(this.elements)
-            .filter(([key, element]) => !element)
-            .map(([key]) => key);
+        // Define critical elements that must exist
+        const criticalElements = [
+            'file', 'fileName', 'family', 'control', 'severity', 'status',
+            'stig', 'cci', 'search', 'tbody', 'emptyState', 'noResults', 'exportBtn'
+        ];
 
-        if (missingElements.length > 0) {
-            throw new Error(`Missing required DOM elements: ${missingElements.join(', ')}`);
+        // Validate critical elements exist
+        const missingCriticalElements = criticalElements
+            .filter(key => !this.elements[key])
+
+        if (missingCriticalElements.length > 0) {
+            throw new Error(`Missing required DOM elements: ${missingCriticalElements.join(', ')}`);
         }
+
+        // Log warnings for optional elements
+        const optionalElements = ['cciFile', 'cciFileName', 'exportMappingsBtn'];
+        optionalElements.forEach(key => {
+            if (!this.elements[key]) {
+                console.warn(`[STIGMapperApp] Optional element not found: ${key}`);
+            }
+        });
     }
 
     async initModules() {
         // Initialize modules in dependency order
-        this.modules.themeManager = new ThemeManager();
         this.modules.statusMessages = new StatusMessages();
         this.modules.statusMessages.init();
         this.modules.fileLoader = new FileLoader(this);
         this.modules.filterPanel = new FilterPanel(this);
         this.modules.filterPanel.init(this.elements);
-        
+
         // Initialize table with elements and state
         VulnTable.init(this.elements, this.state.allRows);
-        
-        // Initialize theme
-        this.modules.themeManager.init(this.elements.themeToggle, this.elements.themeLabel);
     }
 
     setupEventListeners() {
         // File upload events
         this.elements.file.addEventListener('change', (e) => this.handleFileUpload(e));
         this.elements.cciFile.addEventListener('change', (e) => this.handleCciFileUpload(e));
-        
-        // Theme toggle
-        this.elements.themeToggle.addEventListener('change', () => {
-            this.modules.themeManager.toggle();
-        });
         
         // Export button
         this.elements.exportBtn.addEventListener('click', () => this.handleExport());
@@ -130,6 +132,9 @@ class STIGMapperApp {
     initializeUI() {
         this.elements.emptyState.hidden = false;
         this.elements.exportBtn.disabled = true;
+        if (this.elements.exportMappingsBtn) {
+            this.elements.exportMappingsBtn.disabled = true;
+        }
     }
 
     async rehydrate() {
@@ -142,10 +147,24 @@ class STIGMapperApp {
 
         try {
             console.log('[App] Starting data loading from JSON files...');
-            const [stigData, cciMappings] = await Promise.all([
-                window.DataManager.getAllStigRows(),
-                window.DataManager.getCciMappings()
-            ]);
+            let stigData = [];
+            let cciMappings = {};
+
+            try {
+                if (window.DataManager && typeof window.DataManager.getAllStigRows === 'function') {
+                    stigData = await window.DataManager.getAllStigRows();
+                } else {
+                    console.warn('[App] DataManager.getAllStigRows not available');
+                }
+
+                if (window.DataManager && typeof window.DataManager.getCciMappings === 'function') {
+                    cciMappings = await window.DataManager.getCciMappings();
+                } else {
+                    console.warn('[App] DataManager.getCciMappings not available');
+                }
+            } catch (error) {
+                console.warn('[App] Failed to load data from DataManager:', error);
+            }
 
             console.log('[App] Data loading results:', {
                 stigRowsCount: stigData.length,
@@ -156,8 +175,21 @@ class STIGMapperApp {
             if (stigData.length > 0) {
                 console.log('[App] 📊 Loading STIG data into application state...');
                 this.state.allRows = stigData;
-                const stigDataFile = await window.DataManager.getStigData();
-                this.state.loadedFiles = stigDataFile.files || [];
+
+                // Try to get file metadata
+                try {
+                    if (window.DataManager && typeof window.DataManager.getStigData === 'function') {
+                        const stigDataFile = await window.DataManager.getStigData();
+                        this.state.loadedFiles = stigDataFile.files || [];
+                    } else {
+                        console.warn('[App] DataManager.getStigData not available');
+                        this.state.loadedFiles = [];
+                    }
+                } catch (error) {
+                    console.warn('[App] Failed to get STIG file metadata:', error);
+                    this.state.loadedFiles = [];
+                }
+
                 this.processLoadedData(this.state.loadedFiles, true);
                 this.modules.statusMessages.showSuccess('Loaded STIG data from files.', 3000);
                 console.log('[App] ✅ Successfully loaded', stigData.length, 'STIG rows from JSON files');
@@ -410,19 +442,26 @@ class STIGMapperApp {
                 console.log('[UI] 🎯 Applying filters...');
                 this.applyFilters();
 
-                console.log('[UI] ✅ Enabling export button...');
+                console.log('[UI] ✅ Enabling export buttons...');
                 this.elements.exportBtn.disabled = false;
+                if (this.elements.exportMappingsBtn) {
+                    this.elements.exportMappingsBtn.disabled = false;
+                }
 
                 console.log('[UI] 📱 Updating file display...');
                 this.updateFileDisplay(files, 'success');
 
                 // Compile STIG data to JSON file
-                if (window.DataManager) {
+                if (window.DataManager && typeof window.DataManager.compileStigData === 'function') {
                     console.log('[DATAMANAGER] 💾 Compiling STIG data to JSON file...');
-                    await window.DataManager.compileStigData(this.state.allRows, this.state.loadedFiles);
-                    console.log('[DATAMANAGER] ✅ STIG data compiled to JSON file');
+                    try {
+                        await window.DataManager.compileStigData(this.state.allRows, this.state.loadedFiles);
+                        console.log('[DATAMANAGER] ✅ STIG data compiled to JSON file');
+                    } catch (error) {
+                        console.warn('[DATAMANAGER] ⚠️ Failed to compile STIG data:', error);
+                    }
                 } else {
-                    console.warn('[DATAMANAGER] ⚠️ DataManager not available for compiling');
+                    console.warn('[DATAMANAGER] ⚠️ DataManager.compileStigData not available');
                 }
 
                 // Hide the updating message

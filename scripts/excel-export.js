@@ -9,6 +9,11 @@ class ExcelExporter {
     this.workbook = null;
   }
 
+  // Prefer local ExcelJS if available (offline), else SheetJS via CDN, else CSV
+  isExcelJSAvailable() {
+    return typeof window.ExcelJS !== 'undefined';
+  }
+
   // Check if SheetJS is available (for online environments)
   isSheetJSAvailable() {
     return typeof window.XLSX !== 'undefined';
@@ -33,9 +38,78 @@ class ExcelExporter {
   async createWorkbook(data, filename = 'STIG_NIST_Mapping') {
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
     
-    // Try to use SheetJS for true XLSX
+    // 1) Try ExcelJS offline first
+    if (this.isExcelJSAvailable()) {
+      try {
+        const worksheetData = this.prepareWorksheetData(data);
+        const wb = new window.ExcelJS.Workbook();
+        const ws = wb.addWorksheet('STIG Mapping');
+
+        // Set columns based on headers
+        const headers = worksheetData[0];
+        ws.columns = headers.map(h => ({ header: h, key: h, width: 20 }));
+        // Add data rows
+        for (let i = 1; i < worksheetData.length; i++) {
+          ws.addRow(worksheetData[i]);
+        }
+
+        // Styling: header row
+        const headerRow = ws.getRow(1);
+        headerRow.eachCell(cell => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+          cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+          cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          cell.border = {
+            top: { style: 'thin' },
+            bottom: { style: 'thin' },
+            left: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+
+        // Column widths (align with headers order)
+        const colWidths = [15,12,15,12,15,12,40,10,15,25,50,50,50];
+        ws.columns.forEach((col, idx) => { col.width = colWidths[idx] || 20; });
+
+        // Row formatting and conditional colors for severity/status
+        for (let r = 2; r <= ws.rowCount; r++) {
+          const row = ws.getRow(r);
+          row.eachCell(cell => {
+            cell.alignment = { vertical: 'top', wrapText: true };
+            cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+          });
+          // Severity at column 8 (1-based index)
+          const severityCell = row.getCell(8);
+          const sev = String(severityCell.value || '').toLowerCase();
+          let sevColor = null;
+          if (sev === 'critical') sevColor = 'FFFFE6E6';
+          else if (sev === 'high') sevColor = 'FFFFF2E6';
+          else if (sev === 'medium') sevColor = 'FFFFFBE6';
+          else if (sev === 'low') sevColor = 'FFE6F7E6';
+          if (sevColor) severityCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: sevColor } };
+
+          // Status at column 9
+          const statusCell = row.getCell(9);
+          const st = String(statusCell.value || '').toLowerCase();
+          let stColor = null;
+          if (st === 'open' || st === 'failed') stColor = 'FFFFE6E6';
+          else if (st === 'not_a_finding' || st === 'passed') stColor = 'FFE6F7E6';
+          else if (st === 'not_applicable') stColor = 'FFF0F0F0';
+          else if (st === 'not_reviewed') stColor = 'FFE6F0FF';
+          if (stColor) statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: stColor } };
+        }
+
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        this.downloadBlob(blob, `${filename}_${timestamp}.xlsx`);
+        return;
+      } catch (err) {
+        console.warn('ExcelJS generation failed, trying SheetJS:', err);
+      }
+    }
+
+    // 2) Try to use SheetJS for true XLSX
     const sheetJSLoaded = await this.tryLoadSheetJS();
-    
     if (sheetJSLoaded && window.XLSX) {
       try {
         const worksheetData = this.prepareWorksheetData(data);
@@ -270,9 +344,60 @@ class ExcelExporter {
   async createPOAMExport(data, filename = 'POAM_Report') {
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
     
-    // Try to use SheetJS for true XLSX
+    // 1) Try ExcelJS offline first
+    if (this.isExcelJSAvailable()) {
+      try {
+        const poamData = this.preparePOAMData(data);
+        const wb = new window.ExcelJS.Workbook();
+        const ws = wb.addWorksheet('POAM');
+
+        // Add all rows
+        poamData.forEach((arr, idx) => ws.addRow(arr));
+
+        // Merge title row across 12 columns
+        ws.mergeCells(1, 1, 1, 12);
+        const titleCell = ws.getCell(1, 1);
+        titleCell.font = { bold: true, size: 16 };
+        titleCell.alignment = { horizontal: 'center' };
+
+        // Header row styling at row 7 (since we push 6 lines then headers)
+        const headerRowIdx = 7;
+        const headerRow = ws.getRow(headerRowIdx);
+        headerRow.eachCell(cell => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+          cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        // Column widths
+        const colWidths = [15,40,15,25,12,10,30,20,20,15,30,15];
+        ws.columns.forEach((c, i) => { c.width = colWidths[i] || 20; });
+
+        // Risk color on column E (5)
+        for (let r = headerRowIdx + 1; r <= ws.rowCount; r++) {
+          const row = ws.getRow(r);
+          const riskCell = row.getCell(5);
+          const v = String(riskCell.value || '');
+          let color = null;
+          if (v === 'High') color = 'FFFFE6E6';
+          else if (v === 'Medium') color = 'FFFFFBE6';
+          else if (v === 'Low') color = 'FFE6F7E6';
+          if (color) riskCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
+          row.eachCell(cell => { cell.alignment = { vertical: 'top', wrapText: true }; });
+        }
+
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        this.downloadBlob(blob, `${filename}_${timestamp}.xlsx`);
+        return;
+      } catch (err) {
+        console.warn('POAM ExcelJS generation failed, trying SheetJS:', err);
+      }
+    }
+
+    // 2) Try to use SheetJS for true XLSX
     const sheetJSLoaded = await this.tryLoadSheetJS();
-    
     if (sheetJSLoaded && window.XLSX) {
       try {
         const poamData = this.preparePOAMData(data);
@@ -483,6 +608,130 @@ class ExcelExporter {
       }
     }
   }
+
+  // Write a Blob to disk in-browser
+  downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Build an Excel workbook with POAMs and Milestones (two sheets)
+  async exportPOAMsWithMilestones(poams = [], milestones = [], filename = 'POAMs') {
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+
+    // Prefer ExcelJS
+    if (this.isExcelJSAvailable()) {
+      try {
+        const wb = new window.ExcelJS.Workbook();
+
+        // Sheet 1: POAMs
+        const wsP = wb.addWorksheet('POAMs');
+        const pHeaders = ['Title','Status','Priority','Assignee','Due Date','Progress','NIST Controls','Milestones','Created At','Updated At','Description'];
+        wsP.addRow(pHeaders);
+        (poams || []).forEach(p => {
+          const msCount = (milestones || []).filter(m => m.poamId === p.id).length;
+          wsP.addRow([
+            p.title || '',
+            p.status || '',
+            p.priority || '',
+            p.assignee || '',
+            p.dueDate ? new Date(p.dueDate).toLocaleDateString() : '',
+            typeof p.progress === 'number' ? p.progress : '',
+            Array.isArray(p.nistControls) ? p.nistControls.join(', ') : (p.nistControls || ''),
+            msCount,
+            p.createdAt ? new Date(p.createdAt).toLocaleString() : '',
+            p.updatedAt ? new Date(p.updatedAt).toLocaleString() : '',
+            p.description || ''
+          ]);
+        });
+        wsP.getRow(1).eachCell(c => {
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+          c.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+          c.alignment = { horizontal: 'center' };
+        });
+        wsP.columns.forEach((col, idx) => { col.width = [30,12,10,15,14,10,30,12,20,20,60][idx] || 20; });
+
+        // Sheet 2: Milestones
+        const wsM = wb.addWorksheet('Milestones');
+        const mHeaders = ['Title','POAM Title','POAM ID','Status','Due Date','Notes','Created At','Updated At'];
+        wsM.addRow(mHeaders);
+        (milestones || []).forEach(m => {
+          const related = (poams || []).find(p => p.id === m.poamId);
+          wsM.addRow([
+            m.title || '',
+            related ? related.title : '',
+            m.poamId || '',
+            m.status || '',
+            m.dueDate ? new Date(m.dueDate).toLocaleDateString() : '',
+            m.notes || '',
+            m.createdAt ? new Date(m.createdAt).toLocaleString() : '',
+            m.updatedAt ? new Date(m.updatedAt).toLocaleString() : ''
+          ]);
+        });
+        wsM.getRow(1).eachCell(c => {
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+          c.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+          c.alignment = { horizontal: 'center' };
+        });
+        wsM.columns.forEach((col, idx) => { col.width = [30,30,16,12,14,50,20,20][idx] || 20; });
+
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        this.downloadBlob(blob, `${filename}_${timestamp}.xlsx`);
+        return { success: true };
+      } catch (err) {
+        console.warn('ExcelJS POAMs export failed, falling back to CSV:', err);
+      }
+    }
+
+    // Fallback: CSVs for each sheet
+    try {
+      const pHeaders = ['Title','Status','Priority','Assignee','Due Date','Progress','NIST Controls','Milestones','Created At','Updated At','Description'];
+      const pRows = [pHeaders].concat((poams || []).map(p => [
+        p.title || '',
+        p.status || '',
+        p.priority || '',
+        p.assignee || '',
+        p.dueDate ? new Date(p.dueDate).toLocaleDateString() : '',
+        typeof p.progress === 'number' ? p.progress : '',
+        Array.isArray(p.nistControls) ? p.nistControls.join(', ') : (p.nistControls || ''),
+        (milestones || []).filter(m => m.poamId === p.id).length,
+        p.createdAt ? new Date(p.createdAt).toLocaleString() : '',
+        p.updatedAt ? new Date(p.updatedAt).toLocaleString() : '',
+        (p.description || '').replace(/\r?\n/g, ' ')
+      ]));
+      const pCsv = this.convertToCSV(pRows);
+      this.downloadCSV(pCsv, `${filename}_POAMs_${timestamp}.csv`);
+
+      const mHeaders = ['Title','POAM Title','POAM ID','Status','Due Date','Notes','Created At','Updated At'];
+      const mRows = [mHeaders].concat((milestones || []).map(m => {
+        const related = (poams || []).find(p => p.id === m.poamId);
+        return [
+          m.title || '',
+          related ? related.title : '',
+          m.poamId || '',
+          m.status || '',
+          m.dueDate ? new Date(m.dueDate).toLocaleDateString() : '',
+          (m.notes || '').replace(/\r?\n/g, ' '),
+          m.createdAt ? new Date(m.createdAt).toLocaleString() : '',
+          m.updatedAt ? new Date(m.updatedAt).toLocaleString() : ''
+        ];
+      }));
+      const mCsv = this.convertToCSV(mRows);
+      this.downloadCSV(mCsv, `${filename}_Milestones_${timestamp}.csv`);
+      return { success: true };
+    } catch (e) {
+      console.error('CSV POAMs export failed:', e);
+      return { success: false, error: e.message };
+    }
+  }
+
 }
 
 // Export for use in main script
@@ -510,68 +759,142 @@ function sortableNistControl(controlStr) {
 
 // Global function for export button
 async function exportToExcel() {
-  // Get filtered data from the main script
+  let filteredData = [];
+  
+  // Try multiple sources to get the data
   if (typeof getFilteredRows === 'function') {
-    const filteredData = getFilteredRows();
-    if (filteredData.length === 0) {
-      alert('No data to export. Please load a CKLB file first.');
-      return;
-    }
-
-    // Sort by NIST Controls A-Z for export using proper numeric ordering
-    const sortedData = [...filteredData].sort((a, b) => {
-      const aControls = sortableNistControl(a.nistControls.join(', '));
-      const bControls = sortableNistControl(b.nistControls.join(', '));
-      return aControls.localeCompare(bControls);
-    });
-
-    // Show format selection dialog
-    const format = confirm('Choose export format:\nOK = Modern XLSX (Excel 2016+)\nCancel = CSV (universal compatibility)');
-    
-    const exporter = new ExcelExporter();
+    filteredData = getFilteredRows();
+  } else if (typeof VulnTable !== 'undefined' && VulnTable.applyFiltersAndGetRows) {
+    filteredData = VulnTable.applyFiltersAndGetRows();
+  } else if (window.app && window.app.getFilteredRows) {
+    filteredData = window.app.getFilteredRows();
+  } else {
+    // Try to get data directly from DataManager
     try {
-      if (format) {
-        await exporter.createWorkbook(sortedData, 'STIG_NIST_Mapping');
-      } else {
-        await exporter.createCSVExport(sortedData, 'STIG_NIST_Mapping');
+      const dataManager = (window.AppState && AppState.state && AppState.state.dataManager) 
+        ? AppState.state.dataManager 
+        : window.DataManager;
+      
+      if (dataManager) {
+        if (typeof dataManager.restoreFromStorage === 'function') {
+          dataManager.restoreFromStorage();
+        }
+        const stigData = await dataManager.getStigData();
+        filteredData = stigData.rows || [];
       }
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('Export failed. Please try again or use CSV format.');
+      console.error('Error getting data from DataManager:', error);
     }
+  }
+  
+  if (!filteredData || filteredData.length === 0) {
+    alert('No data to export. Please load a CKLB file first.');
+    return;
+  }
+
+  // Sort by NIST Controls A-Z for export using proper numeric ordering
+  const sortedData = [...filteredData].sort((a, b) => {
+    const aControls = sortableNistControl(a.nistControls.join(', '));
+    const bControls = sortableNistControl(b.nistControls.join(', '));
+    return aControls.localeCompare(bControls);
+  });
+
+  // Show format selection dialog
+  const format = confirm('Choose export format:\nOK = Modern XLSX (Excel 2016+)\nCancel = CSV (universal compatibility)');
+  
+  const exporter = new ExcelExporter();
+  if (format) {
+    await exporter.createWorkbook(sortedData, 'STIG_NIST_Mapping');
   } else {
-    alert('Export functionality not available. Please ensure the main script is loaded.');
+    await exporter.createCSVExport(sortedData, 'STIG_NIST_Mapping');
   }
 }
 
 // Global function for POAM export
 async function exportPOAM() {
-  // Get filtered data from the main script
+  let filteredData = [];
+  
+  // Try multiple sources to get the data
   if (typeof getFilteredRows === 'function') {
-    const filteredData = getFilteredRows();
-    if (filteredData.length === 0) {
-      alert('No data to export. Please load a CKLB file first.');
+    filteredData = getFilteredRows();
+  } else if (typeof VulnTable !== 'undefined' && VulnTable.applyFiltersAndGetRows) {
+    filteredData = VulnTable.applyFiltersAndGetRows();
+  } else if (window.app && window.app.getFilteredRows) {
+    filteredData = window.app.getFilteredRows();
+  } else {
+    // Try to get data directly from DataManager
+    try {
+      const dataManager = (window.AppState && AppState.state && AppState.state.dataManager) 
+        ? AppState.state.dataManager 
+        : window.DataManager;
+      
+      if (dataManager) {
+        if (typeof dataManager.restoreFromStorage === 'function') {
+          dataManager.restoreFromStorage();
+        }
+        const stigData = await dataManager.getStigData();
+        filteredData = stigData.rows || [];
+      }
+    } catch (error) {
+      console.error('Error getting data from DataManager:', error);
+    }
+  }
+  
+  if (!filteredData || filteredData.length === 0) {
+    alert('No data to export. Please load a CKLB file first.');
+    return;
+  }
+
+  // Filter for open items only
+  const openItems = filteredData.filter(row => 
+    row.status && row.status.toLowerCase() === 'open'
+  );
+
+  if (openItems.length === 0) {
+    alert('No open findings to export. POAM exports only include items with "Open" status.');
+    return;
+  }
+
+  const exporter = new ExcelExporter();
+  try {
+    await exporter.createPOAMExport(openItems, 'POAM_Report');
+  } catch (error) {
+    console.error('POAM export failed:', error);
+    alert('POAM export failed. Please try again.');
+  }
+}
+
+// Global function to export current POAMs + Milestones to Excel/CSV (used by POAMs page button)
+async function exportPOAMsToExcel() {
+  try {
+    const dataManager = (window.AppState && AppState.state && AppState.state.dataManager)
+      ? AppState.state.dataManager
+      : window.DataManager;
+
+    if (!dataManager) {
+      alert('Data manager not available.');
       return;
     }
 
-    // Filter for open items only
-    const openItems = filteredData.filter(row => 
-      row.status && row.status.toLowerCase() === 'open'
-    );
+    if (typeof dataManager.restoreFromStorage === 'function') {
+      dataManager.restoreFromStorage();
+    }
 
-    if (openItems.length === 0) {
-      alert('No open findings to export. POAM exports only include items with "Open" status.');
+    const poams = await (dataManager.getPOAMs ? dataManager.getPOAMs() : (dataManager.currentData?.poams || []));
+    const milestones = await (dataManager.getMilestones ? dataManager.getMilestones() : (dataManager.currentData?.milestones || []));
+
+    if (!poams || poams.length === 0) {
+      alert('No POAMs to export.');
       return;
     }
 
     const exporter = new ExcelExporter();
-    try {
-      await exporter.createPOAMExport(openItems, 'POAM_Report');
-    } catch (error) {
-      console.error('POAM export failed:', error);
-      alert('POAM export failed. Please try again.');
+    const res = await exporter.exportPOAMsWithMilestones(poams, milestones, 'POAMs');
+    if (!res || res.success !== true) {
+      alert('Export may have failed. Please check console.');
     }
-  } else {
-    alert('Export functionality not available. Please ensure the main script is loaded.');
+  } catch (err) {
+    console.error('POAMs export failed:', err);
+    alert('POAMs export failed: ' + err.message);
   }
 }

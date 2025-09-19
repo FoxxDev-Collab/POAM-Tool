@@ -236,9 +236,21 @@ class STIGMapperApp {
 
             console.log('[STIG] 🔄 Processing each file...');
 
+            // Track processed files to prevent duplicates
+            const processedFileNames = new Set();
+
             // Process each file
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
+                
+                // Check for duplicate files by name and size
+                const fileKey = `${file.name}_${file.size}`;
+                if (processedFileNames.has(fileKey)) {
+                    console.warn(`[STIG] ⚠️ Skipping duplicate file: ${file.name}`);
+                    continue;
+                }
+                processedFileNames.add(fileKey);
+
                 console.log(`[STIG] 📄 Processing file ${i + 1}/${files.length}: ${file.name}`);
 
                 const fileLoadingId = this.modules.statusMessages.showLoading(
@@ -290,9 +302,14 @@ class STIGMapperApp {
             console.log('[STIG] 🎨 Updating UI with processed data...');
             this.processLoadedData(files);
 
+            // Clear the file input to prevent reprocessing the same files
+            event.target.value = '';
+
         } catch (error) {
             console.error('[STIG] ❌ File upload failed:', error);
             this.handleFileError(error);
+            // Clear the file input even on error
+            event.target.value = '';
         }
     }
 
@@ -340,10 +357,15 @@ class STIGMapperApp {
                 await this.reprocessWithCciMappings();
             }
 
+            // Clear the file input to prevent reprocessing
+            event.target.value = '';
+
         } catch (error) {
             console.error('[CCI] ❌ CCI file upload failed:', error);
             this.elements.cciFileName.textContent = `Error loading ${file.name}`;
             this.modules.statusMessages.showError(`Failed to parse CCI XML: ${error.message}`);
+            // Clear the file input even on error
+            event.target.value = '';
         }
     }
 

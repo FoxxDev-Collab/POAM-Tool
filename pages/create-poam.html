@@ -229,7 +229,10 @@
 
   <!-- Core Systems (load first) -->
   <script src="../scripts/app-state.js"></script>
+  <!-- Keep DataStore for STIG vulnerability selector -->
   <script src="../scripts/data-store.js"></script>
+  <!-- Add DataManager for POAM persistence (same system used by STIG page) -->
+  <script src="../scripts/data-manager.js"></script>
 
   <!-- UI Framework and Components -->
   <link rel="stylesheet" href="../components/ui-components.css">
@@ -272,12 +275,12 @@
           }
         }
 
-        // Initialize POAM manager
-        const dataStore = AppState.state.dataStore;
+        // Initialize POAM manager using the same DataManager used across the app
+        const dataManager = AppState.state.dataManager;
         const statusMessages = AppState.getComponent('statusMessages');
         
         if (window.POAMManager) {
-          poamManager = new POAMManager(dataStore, statusMessages);
+          poamManager = new POAMManager(dataManager, statusMessages);
           window.poamManager = poamManager; // Make it globally accessible
 
           // Initialize the form for creating/editing POAMs

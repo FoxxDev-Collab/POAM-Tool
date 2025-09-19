@@ -205,13 +205,53 @@ class DataManager {
                 loadedFiles
             );
 
+            // Preserve existing POAMs and milestones across STIG compiles
+            const existingPoams = this.currentData?.poams || [];
+            const existingMilestones = this.currentData?.milestones || [];
+            consolidatedData.poams = existingPoams;
+            consolidatedData.milestones = existingMilestones;
+
+            // If there is existing metadata, preserve certain fields
+            if (this.currentData?.metadata) {
+                consolidatedData.metadata = {
+                    ...consolidatedData.metadata,
+                    // Keep the original createdAt if present, but update lastUpdated
+                    createdAt: this.currentData.metadata.createdAt || consolidatedData.metadata.createdAt,
+                    lastUpdated: new Date().toISOString(),
+                    // Carry forward tallies where applicable
+                    totalPoams: existingPoams.length,
+                    totalMilestones: existingMilestones.length,
+                };
+            }
+
             // Store as current data
             this.currentData = consolidatedData;
 
             // Force save to localStorage with verification
-            const saved = this.saveToStorage();
+            let saved = this.saveToStorage();
             if (!saved) {
-                console.warn('[DataManager] Failed to save STIG data to localStorage');
+                console.warn('[DataManager] Failed to save STIG data to localStorage, attempting compaction...');
+                // Attempt to compact the data and save again
+                const compacted = this.compactDataForStorage(this.currentData);
+                this.currentData = compacted;
+                saved = this.saveToStorage();
+                if (!saved) {
+                    console.warn('[DataManager] Compacted save still failed. Persisting metadata, mappings, POAMs, and milestones only. Vulnerabilities will not be rehydrated next load.');
+                    // As a last resort, drop vulnerabilities from storage but keep everything else
+                    this.currentData = {
+                        ...this.currentData,
+                        vulnerabilities: [],
+                        metadata: {
+                            ...this.currentData.metadata,
+                            compacted: true,
+                            droppedVulnerabilitiesForQuota: true,
+                            lastUpdated: new Date().toISOString(),
+                        }
+                    };
+                    this.saveToStorage();
+                } else {
+                    console.log('[DataManager] STIG data saved in compacted form');
+                }
             }
 
             console.log('[DataManager] STIG data compiled successfully');
@@ -220,6 +260,53 @@ class DataManager {
         } catch (error) {
             console.error('[DataManager] Failed to compile STIG data:', error);
             throw error;
+        }
+    }
+
+    // Create a compact copy of currentData that fits localStorage better
+    compactDataForStorage(data) {
+        try {
+            const copy = JSON.parse(JSON.stringify(data));
+            if (Array.isArray(copy.vulnerabilities)) {
+                // Strip large text fields and keep essential fields for identification/filtering
+                copy.vulnerabilities = copy.vulnerabilities.map(v => ({
+                    id: v.id ?? v.group_id,
+                    group_id: v.group_id,
+                    rule_id: v.rule_id,
+                    rule_title: v.rule_title,
+                    severity: v.severity,
+                    status: v.status,
+                    stig_name: v.stig_name,
+                    ccis: Array.isArray(v.ccis) ? v.ccis : [],
+                    nistControls: Array.isArray(v.nistControls) ? v.nistControls : [],
+                    families: Array.isArray(v.families) ? v.families : []
+                }));
+
+                // If still too large, cap the number of rows stored
+                const approxSize = JSON.stringify(copy).length;
+                const maxBytes = 4.5 * 1024 * 1024; // ~4.5MB safety threshold
+                if (approxSize > maxBytes) {
+                    const factor = maxBytes / approxSize;
+                    const keep = Math.max(200, Math.floor(copy.vulnerabilities.length * factor));
+                    copy.vulnerabilities = copy.vulnerabilities.slice(0, keep);
+                    copy.metadata = {
+                        ...copy.metadata,
+                        compacted: true,
+                        truncatedVulnerabilities: true,
+                        keptRows: keep,
+                        originalRows: data.vulnerabilities?.length || keep
+                    };
+                } else {
+                    copy.metadata = {
+                        ...copy.metadata,
+                        compacted: true
+                    };
+                }
+            }
+            return copy;
+        } catch (e) {
+            console.warn('[DataManager] Failed to compact data for storage:', e);
+            return data; // Fallback to original
         }
     }
 

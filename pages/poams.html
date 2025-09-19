@@ -22,16 +22,20 @@
       <!-- Primary Actions Row -->
       <div class="filter-row primary-actions">
         <div class="filter-group">
-          <button id="add-poam-btn" class="btn btn-primary" onclick="window.location.href='poam-wizard.html'">
+          <button id="add-poam-btn" class="btn btn-primary" data-ui-button data-variant="primary" onclick="window.location.href='poam-wizard.html'">
             <span class="btn-icon"></span>
             New POAM
           </button>
-          <button id="export-btn" class="btn btn-export" onclick="poamManager.exportData('complete')">
+          <button id="export-btn" class="btn btn-export" data-ui-button data-variant="info" onclick="poamManager.exportData('complete')">
             <span class="btn-icon"></span>
             Export POAMs
           </button>
+          <button id="export-xlsx-btn" class="btn btn-export" data-ui-button data-variant="info" onclick="exportPOAMsToExcel()" title="Export POAMs and Milestones to Excel">
+            <span class="btn-icon"></span>
+            Export to Excel
+          </button>
 
-          <label for="import-file" class="btn btn-secondary">
+          <label for="import-file" class="btn btn-secondary" data-ui-button data-variant="secondary">
             <span class="btn-icon"></span>
             Import POAMs
           </label>
@@ -49,12 +53,12 @@
         </div>
 
         <div class="filter-group">
-          <button id="filter-toggle" class="btn btn-secondary filter-btn">
+          <button id="filter-toggle" class="btn btn-secondary filter-btn" data-ui-button data-variant="secondary">
             <span class="filter-icon"></span>
             Filters
             <span class="filter-count" style="display: none;">0</span>
           </button>
-          <button id="sort-menu-btn" class="btn btn-secondary">
+          <button id="sort-menu-btn" class="btn btn-secondary" data-ui-button data-variant="secondary">
             <span class="sort-icon"></span>
             Sort
           </button>
@@ -431,6 +435,8 @@
   <script src="../components/ui-framework.js"></script>
   <script src="../components/icon-library.js"></script>
   <script src="../components/ui-components.js"></script>
+  <!-- Progressive Button Migration (opt-in via data-ui-button) -->
+  <script src="../components/button-migration.js"></script>
 
   <!-- Navigation and UI components -->
   <script src="../components/navigation.js"></script>
@@ -440,9 +446,14 @@
   <script src="../scripts/data-manager.js"></script>
   
   <!-- POAM Management functionality -->
+  <!-- ExcelJS CDN for browser XLSX export -->
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="../scripts/excel-export.js"></script>
   <script src="../scripts/poam-manager.js"></script>
   <script src="../scripts/export-import-manager.js"></script>
   
+  <!-- ExcelJS export functionality is now handled by excel-export.js -->
+
   <!-- Application initialization -->
   <script>
     let poamManager;

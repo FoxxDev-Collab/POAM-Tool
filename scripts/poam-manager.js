@@ -322,7 +322,8 @@ class POAMManager {
 
             const poamData = {
                 ...formData,
-                id: this.editingPOAM ? this.editingPOAM.id : undefined,
+                // Ensure a stable unique ID for new POAMs
+                id: this.editingPOAM ? this.editingPOAM.id : (Date.now() + Math.random()),
                 createdAt: this.editingPOAM ? this.editingPOAM.createdAt : new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
@@ -453,12 +454,9 @@ class POAMManager {
                 updatedAt: new Date().toISOString()
             };
 
-            // Save to data manager
+            // Persist the edited POAMs to storage
             if (this.dataManager) {
-                const saved = this.dataManager.saveToStorage();
-                if (!saved) {
-                    throw new Error('Failed to save POAM changes');
-                }
+                await this.dataManager.compilePoamData(this.currentPOAMs, this.currentMilestones);
             }
 
             // Close modal
@@ -489,8 +487,12 @@ class POAMManager {
                 throw new Error('Data storage not available');
             }
 
-            // Remove from current POAMs and recompile
-            this.currentPOAMs = this.currentPOAMs.filter(p => p.id !== poamId);
+            // Remove from current POAMs with flexible ID matching
+            this.currentPOAMs = this.currentPOAMs.filter(p => {
+                return p.id !== poamId &&
+                       p.id !== parseFloat(poamId) &&
+                       String(p.id) !== String(poamId);
+            });
             await this.dataManager.compilePoamData(this.currentPOAMs, this.currentMilestones);
             
             if (this.statusMessages) {
@@ -689,6 +691,15 @@ class POAMManager {
             }
 
             console.log(`[POAMManager] Updated POAM ${poam.id} progress to ${progressPercentage}% (${completedMilestones.length}/${poamMilestones.length} milestones completed)`);
+
+            // Persist the updated POAM progress and status
+            if (this.dataManager) {
+                try {
+                    await this.dataManager.compilePoamData(this.currentPOAMs, this.currentMilestones);
+                } catch (persistError) {
+                    console.warn('[POAMManager] Failed to persist updated POAM progress:', persistError);
+                }
+            }
 
         } catch (error) {
             console.error('Failed to update POAM progress:', error);

@@ -64,6 +64,68 @@
         </div>
       </div>
     </section>
+
+    <!-- Enhanced Upload Guide -->
+    <section class="instructions">
+      <div class="instructions-content">
+        <h2>Upload Guide (Best Results)</h2>
+
+        <div class="instruction-step">
+          <div class="step-number">A</div>
+          <div class="step-content">
+            <h3>Upload the CCI List First</h3>
+            <p>On the <strong>STIG Analysis</strong> page, upload the official CCI list XML (e.g., <code>U_CCI_List.xml</code>) before importing any checklists. This loads comprehensive CCI → NIST mappings so controls are associated immediately.</p>
+            <ul>
+              <li><strong>Why:</strong> Ensures more complete NIST mappings across all STIG rules.</li>
+              <li><strong>One-time per session:</strong> Once loaded, the mappings are stored and reused.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="instruction-step">
+          <div class="step-number">B</div>
+          <div class="step-content">
+            <h3>Prefer Importing One Checklist at a Time</h3>
+            <p>While bulk uploads are supported, importing <strong>1 checklist at a time</strong> is preferred for performance and reliability in the browser environment.</p>
+            <ul>
+              <li><strong>Performance:</strong> Large multi-file imports can be slow and memory-heavy in the browser.</li>
+              <li><strong>Reliability:</strong> Single-file imports avoid hitting localStorage size limits and reduce parsing load.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="instruction-step">
+          <div class="step-number">C</div>
+          <div class="step-content">
+            <h3>If You Do Bulk Uploads</h3>
+            <p>Bulk imports will work, but the app may compact stored data to fit browser storage limits.</p>
+            <ul>
+              <li><strong>Compaction:</strong> Large text fields in vulnerabilities may be trimmed in storage. This does not affect current session analysis.</li>
+              <li><strong>Tip:</strong> After importing, use <strong>Export to Excel</strong> or <strong>Export Mappings</strong> to save your results externally.</li>
+              <li><strong>POAM Safety:</strong> POAMs and milestones are always saved with priority, even if vulnerabilities are compacted.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="instruction-step">
+          <div class="step-number">D</div>
+          <div class="step-content">
+            <h3>Troubleshooting</h3>
+            <ul>
+              <li><strong>QuotaExceededError:</strong> The browser’s localStorage is full. The app automatically compacts STIG data and retries. Consider importing fewer files at once, or export and clear data.</li>
+              <li><strong>Unmapped Controls:</strong> Ensure the CCI list is uploaded first. Some rules may not contain CCIs or explicit NIST references and can remain unmapped.</li>
+              <li><strong>Missing Data After Refresh:</strong> POAMs and milestones persist. If STIG rows weren’t stored due to size, re-import the checklist or export results after analysis.</li>
+              <li><strong>Performance Tips:</strong> Close other heavy tabs, and import one checklist at a time for faster processing.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="workflow-note">
+          <h3>📌 Summary</h3>
+          <p><strong>1) Upload CCI XML → 2) Import one checklist → 3) Analyze and export → 4) Create and manage POAMs</strong></p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="app-footer">
@@ -87,6 +149,8 @@
   <script src="components/ui-framework.js"></script>
   <script src="components/icon-library.js"></script>
   <script src="components/ui-components.js"></script>
+  <!-- Progressive Button Migration (opt-in via data-ui-button) -->
+  <script src="components/button-migration.js"></script>
   
   <!-- Navigation and UI components -->
   <script src="components/navigation.js"></script>

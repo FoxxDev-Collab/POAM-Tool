@@ -15,10 +15,6 @@
       <p>Import and analyze STIG files to map vulnerabilities to NIST controls</p>
     </div>
     
-    <div class="header-actions">
-      <button id="toggle-debug-panel" class="btn btn-secondary" title="Toggle Debug Panel">🔧 Debug</button>
-    </div>
-    
     <div class="file-loader">
       <label for="cklbFile" class="btn">Load STIG Files</label>
       <input id="cklbFile" type="file" accept=".json,.cklb,.ckl,.xml,application/json,application/xml" multiple />
@@ -91,27 +87,27 @@
           <input id="searchInput" type="search" placeholder="Search title, discussion, details, etc." />
         </div>
         <div class="filter">
-          <button id="exportBtn" class="btn btn-export" disabled>
+          <button id="exportBtn" class="btn btn-export" data-ui-button data-variant="info" disabled>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8.5 6.5a.5.5 0 0 0-1 0v3.793L6.354 9.146a.5.5 0 1 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L8.5 10.293V6.5z"/>
               <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
             </svg>
             Export to Excel
           </button>
-          <button id="exportMappingsBtn" class="btn btn-export" disabled title="Export CCI/STIG mappings for POAM import">
+          <button id="exportMappingsBtn" class="btn btn-export" data-ui-button data-variant="info" disabled title="Export CCI/STIG mappings for POAM import">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1zm3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4h-3.5zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z"/>
             </svg>
             Export Mappings
           </button>
-
-          <label for="import-poam-file" class="btn btn-secondary" title="Import POAM data from shared file">
+          <button id="importMappingsBtn" class="btn btn-import" data-ui-button data-variant="success" title="Import CCI/STIG mappings from exported JSON file">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1zm3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4h-3.5zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z"/>
+              <path d="M8.5 9.5a.5.5 0 0 1-1 0V3.707L6.354 4.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 3.707V9.5z"/>
+              <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
             </svg>
-            Import POAMs
-          </label>
-          <input id="import-poam-file" type="file" accept=".json" style="display: none;" onchange="handlePOAMImport(this)">
+            Import Mappings
+          </button>
+          <input id="importMappingsFile" type="file" accept=".json,application/json" style="display: none;" />
         </div>
       </div>
     </section>
@@ -176,28 +172,6 @@
     <small>Client-side only. Data persisted locally in your browser.</small>
   </footer>
 
-  <!-- Debug Panel -->
-  <div id="debug-panel" class="debug-panel" style="display: none;">
-    <div class="debug-header">
-      <h3>🔧 Debug Panel</h3>
-      <button id="close-debug-panel" class="btn btn-icon" title="Close Debug Panel">✕</button>
-    </div>
-    <div class="debug-content">
-      <div class="debug-section">
-        <button onclick="debugTestInitialization()">Test DataStore Init</button>
-        <button onclick="debugSaveTestData()">Save Test Data</button>
-        <button onclick="debugLoadData()">Load Data</button>
-        <button onclick="debugCheckDatabase()">Check DB</button>
-        <button onclick="debugClearData()">Clear Data</button>
-      </div>
-      <div class="debug-console">
-        <h4>Console Output:</h4>
-        <div id="debug-console-output" class="console-output"></div>
-      </div>
-    </div>
-  </div>
-
-
   <!-- Core Systems (load first) -->
   <script src="../scripts/app-state.js"></script>
   <script src="../scripts/data-manager.js"></script>
@@ -205,6 +179,8 @@
   <!-- Core functionality modules -->
   <script src="../scripts/importer.js"></script>
   <script src="../scripts/vuln-table.js"></script>
+  <!-- ExcelJS CDN for browser XLSX export -->
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="../scripts/excel-export.js"></script>
   <script src="../scripts/export-import-manager.js"></script>
   
@@ -215,6 +191,8 @@
   <script src="../components/ui-components.js"></script>
   <script src="../components/table-component.js"></script>
   <script src="../components/layout-components.js"></script>
+  <!-- Progressive Button Migration (opt-in via data-ui-button) -->
+  <script src="../components/button-migration.js"></script>
   
   <!-- Navigation and Application-specific UI components -->
   <script src="../components/navigation.js"></script>
@@ -235,7 +213,7 @@
         
         // Setup STIG-specific functionality
         setupExportMappings();
-        setupDebugPanel();
+        setupImportMappings();
         
         console.log('STIG Analysis Page ready!');
         
@@ -244,8 +222,6 @@
         // Error handling is managed by AppState
       }
     });
-
-    // Setup POAM creation functionality
 
     // Setup export mappings functionality
     function setupExportMappings() {
@@ -280,14 +256,8 @@
               return;
             }
 
-            // Show format selection dialog
-            const formatChoice = confirm(
-              'Choose export format for CCI/STIG mappings:\n\n' +
-              'OK = JSON format (recommended for POAM import)\n' +
-              'Cancel = CSV format (for spreadsheet analysis)'
-            );
-
-            const format = formatChoice ? 'json' : 'csv';
+            // Export Mappings only exports JSON format (for POAM import)
+            const format = 'json';
             const exportManager = new ExportImportManager();
 
             // Show progress
@@ -343,225 +313,77 @@
       }
     }
 
-    // Setup debug panel functionality
-    function setupDebugPanel() {
-      const toggleBtn = document.getElementById('toggle-debug-panel');
-      const closeBtn = document.getElementById('close-debug-panel');
-      const debugPanel = document.getElementById('debug-panel');
+    // Setup import mappings functionality
+    function setupImportMappings() {
+      const importMappingsBtn = document.getElementById('importMappingsBtn');
+      const importMappingsFile = document.getElementById('importMappingsFile');
 
-      if (toggleBtn && debugPanel) {
-        toggleBtn.addEventListener('click', () => {
-          debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
-        });
-      }
-
-      if (closeBtn && debugPanel) {
-        closeBtn.addEventListener('click', () => {
-          debugPanel.style.display = 'none';
-        });
-      }
-    }
-
-    // Debug functions
-    async function debugTestInitialization() {
-      try {
-        if (!window.DataStore) {
-          throw new Error('DataStore not loaded');
-        }
-
-        await window.DataStore.ready();
-
-        showDebugMessage('✅ DataStore initialized successfully', 'success');
-        showDebugMessage(`DataStore ready: ${window.DataStore.isReady}`, 'info');
-        showDebugMessage(`Using localStorage fallback: ${window.DataStore.useLocalStorage}`, 'info');
-        showDebugMessage(`Database name: ${window.DataStore.dbName}`, 'info');
-        showDebugMessage(`Database version: ${window.DataStore.dbVersion}`, 'info');
-      } catch (error) {
-        showDebugMessage(`❌ Initialization failed: ${error.message}`, 'error');
-      }
-    }
-
-    async function debugSaveTestData() {
-      try {
-        showDebugMessage('Saving test data...', 'info');
-
-        // Create test STIG data
-        const testData = {
-          stigName: 'Debug Test STIG',
-          rows: [
-            {
-              group_id: 'V-DEBUG-001',
-              rule_id: 'SV-DEBUG-001r1',
-              rule_version: '1.0',
-              rule_title: 'Debug Test Rule 1',
-              severity: 'high',
-              status: 'open',
-              stig_name: 'Debug Test STIG',
-              nistControls: ['AC-1', 'AC-2'],
-              ccis: ['CCI-000001', 'CCI-000002'],
-              discussion: 'This is a debug test rule for troubleshooting data persistence.'
-            }
-          ]
-        };
-
-        const saveResult = await window.DataStore.saveStigData(testData, 'debug-test.json', 'application/json');
-
-        showDebugMessage('✅ Test data saved successfully', 'success');
-        showDebugMessage(`Record ID: ${saveResult.id}`, 'info');
-        showDebugMessage(`File Name: ${saveResult.fileName}`, 'info');
-        showDebugMessage(`Row Count: ${saveResult.rowCount}`, 'info');
-        showDebugMessage(`Import Date: ${new Date(saveResult.importDate).toLocaleString()}`, 'info');
-      } catch (error) {
-        showDebugMessage(`❌ Save failed: ${error.message}`, 'error');
-      }
-    }
-
-    async function debugLoadData() {
-      try {
-        showDebugMessage('Loading STIG data...', 'info');
-
-        const stigData = await window.DataStore.getAllStigRows();
-        const fileMetadata = await window.DataStore.getStigData();
-
-        if (stigData.length === 0) {
-          showDebugMessage('ℹ️ No STIG data found in storage', 'info');
-          return;
-        }
-
-        showDebugMessage(`✅ Loaded ${stigData.length} STIG rows from ${fileMetadata.length} files`, 'success');
-
-        fileMetadata.forEach(file => {
-          showDebugMessage(`📁 ${file.fileName} - ${file.rowCount} rows, imported ${new Date(file.importDate).toLocaleString()}`, 'info');
+      if (importMappingsBtn && importMappingsFile) {
+        // Click button to trigger file selection
+        importMappingsBtn.addEventListener('click', () => {
+          importMappingsFile.click();
         });
 
-        if (stigData.length > 0) {
-          showDebugMessage('📋 Sample data:', 'info');
-          showDebugMessage(JSON.stringify(stigData[0], null, 2), 'info');
-        }
-      } catch (error) {
-        showDebugMessage(`❌ Load failed: ${error.message}`, 'error');
-      }
-    }
+        // Handle file selection
+        importMappingsFile.addEventListener('change', async (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
 
-    async function debugCheckDatabase() {
-      try {
-        showDebugMessage('Checking database contents...', 'info');
+          console.log('Import Mappings - Debugging app availability:', {
+            windowApp: !!window.app,
+            appState: window.AppState ? 'available' : 'not available',
+            stigApp: !!(window.AppState && window.AppState.getComponent && window.AppState.getComponent('stigApp')),
+            stigAppHandleFileUpload: !!(window.AppState && window.AppState.getComponent && window.AppState.getComponent('stigApp') && window.AppState.getComponent('stigApp').handleFileUpload)
+          });
 
-        const stores = ['stigData', 'poams', 'milestones', 'cciMappings', 'settings'];
-
-        for (const store of stores) {
           try {
-            const data = await window.DataStore.read(store);
-            showDebugMessage(`${store}: ${data.length} records`, 'info');
+            // Show progress
+            importMappingsBtn.disabled = true;
+            importMappingsBtn.innerHTML = 'Importing...';
 
-            if (data.length > 0 && data.length <= 3) {
-              showDebugMessage(JSON.stringify(data, null, 2), 'info');
-            } else if (data.length > 3) {
-              showDebugMessage(JSON.stringify(data.slice(0, 2), null, 2) + `\n...and ${data.length - 2} more records`, 'info');
+            // Use the STIG app's file upload handler if available
+            if (window.AppState && window.AppState.getComponent) {
+              const stigApp = window.AppState.getComponent('stigApp');
+              if (stigApp && typeof stigApp.handleFileUpload === 'function') {
+                // Create a fake event object for the app's handler
+                const fakeEvent = { target: { files: [file] } };
+                await stigApp.handleFileUpload(fakeEvent);
+
+                // Show success message
+                alert(`Successfully imported ${file.name}!\n\nThe STIG data has been loaded and is ready for analysis.`);
+
+                if (stigApp.modules && stigApp.modules.statusMessages) {
+                  stigApp.modules.statusMessages.showSuccess(`Imported mappings from ${file.name}`);
+                }
+              } else {
+                throw new Error('STIG application not ready for file import');
+              }
+            } else {
+              throw new Error('AppState not available');
             }
-          } catch (storeError) {
-            showDebugMessage(`${store}: Error - ${storeError.message}`, 'error');
+
+          } catch (error) {
+            console.error('Import mappings failed:', error);
+            alert(`Import failed: ${error.message}`);
+
+            if (window.app && window.app.modules && window.app.modules.statusMessages) {
+              window.app.modules.statusMessages.showError(`Import failed: ${error.message}`);
+            }
+          } finally {
+            // Restore button
+            importMappingsBtn.disabled = false;
+            importMappingsBtn.innerHTML = `
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8.5 9.5a.5.5 0 0 1-1 0V3.707L6.354 4.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 3.707V9.5z"/>
+                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+              </svg>
+              Import Mappings
+            `;
+            
+            // Clear the file input
+            importMappingsFile.value = '';
           }
-        }
-      } catch (error) {
-        showDebugMessage(`❌ Database check failed: ${error.message}`, 'error');
-      }
-    }
-
-    async function debugClearData() {
-      try {
-        if (!confirm('Are you sure you want to clear ALL data? This cannot be undone.')) {
-          return;
-        }
-
-        showDebugMessage('Clearing all data...', 'info');
-
-        await window.DataStore.clearAllData();
-
-        showDebugMessage('✅ All data cleared successfully', 'success');
-      } catch (error) {
-        showDebugMessage(`❌ Clear failed: ${error.message}`, 'error');
-      }
-    }
-
-    function showDebugMessage(message, type = 'info') {
-      const consoleOutput = document.getElementById('debug-console-output');
-      if (!consoleOutput) return;
-
-      const messageDiv = document.createElement('div');
-      messageDiv.className = `debug-message debug-${type}`;
-      messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-
-      consoleOutput.appendChild(messageDiv);
-      consoleOutput.scrollTop = consoleOutput.scrollHeight;
-    }
-
-
-
-
-    // Handle POAM import on STIG page
-    async function handlePOAMImport(input) {
-      try {
-        const file = input.files[0];
-        if (!file) return;
-
-        if (!file.name.endsWith('.json')) {
-          alert('Please select a JSON file exported from this application.');
-          input.value = '';
-          return;
-        }
-
-        // Show loading indicator
-        const label = input.previousElementSibling;
-        const originalText = label.textContent;
-        label.textContent = 'Importing...';
-
-        // Get the data manager
-        const dataManager = AppState?.state?.dataManager;
-        if (!dataManager) {
-          throw new Error('Data manager not available');
-        }
-
-        // Read and parse the file
-        const fileContent = await file.text();
-        const importData = JSON.parse(fileContent);
-
-        // Validate the import data
-        if (!dataManager.validateImportData(importData)) {
-          throw new Error('Invalid import file format. Please use a file exported from this application.');
-        }
-
-        // Show confirmation dialog for merge strategy
-        const userChoice = confirm(
-          'Choose import strategy:\n\n' +
-          'OK = Replace all existing POAM data\n' +
-          'Cancel = Merge with existing POAM data\n\n' +
-          'Note: This will affect your POAM data, not STIG analysis data.'
-        );
-        const mergeStrategy = userChoice ? 'replace' : 'merge';
-
-        // Import the data
-        await dataManager.importData(importData, mergeStrategy);
-
-        const message = mergeStrategy === 'replace'
-          ? 'POAM data imported successfully (replaced existing data)'
-          : 'POAM data imported successfully (merged with existing data)';
-
-        alert(message);
-
-        // Show status message if available
-        if (AppState?.getComponent && AppState.getComponent('statusMessages')) {
-          AppState.getComponent('statusMessages').showSuccess(message);
-        }
-
-      } catch (error) {
-        console.error('Import failed:', error);
-        alert(`Import failed: ${error.message}`);
-      } finally {
-        // Reset button text and clear input
-        const label = input.previousElementSibling;
-        if (label) label.textContent = 'Import POAMs';
-        input.value = '';
+        });
       }
     }
 

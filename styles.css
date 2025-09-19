@@ -215,37 +215,73 @@
     display: none;
   }
   
+  /*
+   * Unified Button Styles
+   * Map legacy .btn classes to the new UI Button design tokens
+   * so existing markup inherits the standardized look & feel.
+   */
   .btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    background: var(--accent);
-    color: var(--bg);
-    font-weight: 600;
-    padding: 8px 12px;
-    border-radius: 8px;
-    cursor: pointer;
+    justify-content: center;
+    gap: var(--ui-spacing-sm, 0.5rem);
+    padding: var(--ui-spacing-sm, 0.5rem) var(--ui-spacing-md, 1rem);
     border: 1px solid transparent;
+    border-radius: var(--ui-radius-md, 0.25rem);
+    font-family: var(--ui-font-family, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial);
+    font-size: var(--ui-font-size-md, 1rem);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--ui-transition-fast, 150ms ease);
+    user-select: none;
+    white-space: nowrap;
+    background: var(--ui-color-primary, var(--accent));
+    color: #fff;
   }
-  
-  .btn:hover {
-    filter: brightness(1.05);
+
+  .btn:hover { filter: brightness(1.05); }
+  .btn:focus { outline: 2px solid var(--ui-color-primary, var(--accent)); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; filter: none; }
+
+  /* Size helpers to mirror UI Button */
+  .btn.btn-sm { padding: var(--ui-spacing-xs, 0.25rem) var(--ui-spacing-sm, 0.5rem); font-size: var(--ui-font-size-sm, 0.875rem); }
+  .btn.btn-lg { padding: var(--ui-spacing-md, 1rem) var(--ui-spacing-lg, 1.5rem); font-size: var(--ui-font-size-lg, 1.125rem); }
+
+  /* Variants mapped to UI tokens */
+  .btn-primary {
+    background: var(--ui-color-primary, #007bff);
+    border-color: var(--ui-color-primary, #007bff);
+    color: #fff;
   }
 
   .btn-secondary {
-    background: var(--border);
-    color: var(--text);
+    background: var(--ui-color-secondary, #6c757d);
+    border-color: var(--ui-color-secondary, #6c757d);
+    color: #fff;
   }
 
   .btn-export {
-    background: var(--accent-2);
-    color: var(--bg);
+    background: var(--ui-color-info, #17a2b8);
+    border-color: var(--ui-color-info, #17a2b8);
+    color: #fff;
   }
 
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    filter: none;
+  .btn-danger {
+    background: var(--ui-color-danger, #dc3545);
+    border-color: var(--ui-color-danger, #dc3545);
+    color: #fff;
+  }
+
+  .btn-warning {
+    background: var(--ui-color-warning, #ffc107);
+    border-color: var(--ui-color-warning, #ffc107);
+    color: var(--ui-color-dark, #343a40);
+  }
+
+  .btn-success {
+    background: var(--ui-color-success, #28a745);
+    border-color: var(--ui-color-success, #28a745);
+    color: #fff;
   }
   
   .file-name {
@@ -1338,14 +1374,21 @@
     height: 8px;
     background: var(--bg-hover);
     border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 0.25rem;
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0;
   }
 
   .progress-fill {
     height: 100%;
     background: var(--accent);
     transition: width 0.3s ease;
+  }
+
+  td .progress-bar + small {
+    display: inline-block;
+    margin-left: 8px;
+    vertical-align: middle;
   }
 
   .poam-title {

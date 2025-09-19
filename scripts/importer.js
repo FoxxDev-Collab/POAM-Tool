@@ -16,8 +16,12 @@ const FileImporter = (() => {
             rule.nist_controls,
             rule.nistControls,
             rule.NIST,
+            rule['NIST SP 800-53'],
+            rule['NIST_800_53'],
             rule.mappings?.nist,
             rule.references?.nist,
+            rule.references?.nist_sp_800_53,
+            rule.references?.nist80053,
         ].filter(Boolean);
 
         const list = new Set();
@@ -77,14 +81,23 @@ const FileImporter = (() => {
             const nistControls = new Set();
             
             for (const ref of references) {
-                if (ref.getAttribute('creator') === 'NIST') {
-                    const index = ref.getAttribute('index');
-                    if (index) {
-                        // Extract NIST control from index (e.g., "AC-2 e" -> "AC-2")
-                        const match = index.match(/^([A-Z]{2,3}-\d+(?:\s*\([^)]+\))?)/);
-                        if (match) {
-                            nistControls.add(cleanControl(match[1]));
-                        }
+                const creator = (ref.getAttribute('creator') || '').toUpperCase();
+                const isNistRef = /NIST/.test(creator) || /800-53/.test(creator);
+                if (!isNistRef) continue;
+
+                // Check multiple possible fields: index, title, text content
+                const candidates = [
+                    ref.getAttribute('index'),
+                    ref.getAttribute('title'),
+                    ref.textContent
+                ].filter(Boolean);
+
+                for (const cand of candidates) {
+                    // Find all potential controls in the string
+                    const matches = String(cand).match(nistRegex) || [];
+                    for (const m of matches) {
+                        const ctrl = cleanControl(m);
+                        if (ctrl) nistControls.add(ctrl);
                     }
                 }
             }
@@ -99,7 +112,11 @@ const FileImporter = (() => {
     }
 
     function mapCcisToNist(ccis, customCciMap = null) {
-        const activeMap = customCciMap || {};
+        // Fallback to DataManager's persisted CCI mappings if custom map isn't provided
+        const dmMap = (window.DataManager && window.DataManager.currentData && window.DataManager.currentData.cciMappings)
+            ? window.DataManager.currentData.cciMappings
+            : {};
+        const activeMap = customCciMap || dmMap || {};
         const nistControls = new Set();
         for (const cci of ccis) {
             const mapped = activeMap[cci];
@@ -117,7 +134,17 @@ const FileImporter = (() => {
             const stigName = stig.display_name || stig.stig_name || stig.stig_id || 'Unknown STIG';
             const rules = Array.isArray(stig.rules) ? stig.rules : [];
             for (const rule of rules) {
-                const ccis = Array.isArray(rule.ccis) ? rule.ccis.slice() : [];
+                // Accept CCIs as array or delimited string
+                let ccis = [];
+                if (Array.isArray(rule.ccis)) {
+                    ccis = rule.ccis.slice();
+                } else if (typeof rule.ccis === 'string') {
+                    ccis = rule.ccis.split(/[;,\s]+/).map(s => s.trim()).filter(Boolean);
+                } else if (Array.isArray(rule.cci_refs)) {
+                    ccis = rule.cci_refs.slice();
+                } else if (typeof rule.cci_refs === 'string') {
+                    ccis = rule.cci_refs.split(/[;,\s]+/).map(s => s.trim()).filter(Boolean);
+                }
                 
                 // Try multiple approaches to get NIST controls
                 const explicit = readExplicitNist(rule);
@@ -178,12 +205,52 @@ const FileImporter = (() => {
         const fileName = file.name.toLowerCase();
         
         if (fileName.endsWith('.json') || fileName.endsWith('.cklb')) {
-            // Parse CKLB JSON format
+            // Parse JSON format
             const json = JSON.parse(text);
-            return {
-                type: 'CKLB',
-                rows: normalizeRows(json, customCciMap)
-            };
+            
+            // Check if this is an exported mapping file (has vulnerabilities array)
+            if (json.vulnerabilities && Array.isArray(json.vulnerabilities)) {
+                // Handle exported mapping format - convert to standard row format
+                const rows = json.vulnerabilities.map(vuln => ({
+                    group_id: vuln.vulnId || vuln.id || '',
+                    rule_id: vuln.ruleId || '',
+                    rule_version: vuln.ruleVersion || '',
+                    rule_title: vuln.title || '',
+                    severity: vuln.severity || '',
+                    weight: 0,
+                    class: '',
+                    stig_name: vuln.stigName || '',
+                    stig_id: '',
+                    stig_version: '',
+                    status: vuln.status || '',
+                    finding_details: vuln.findingDetails || '',
+                    comments: '',
+                    discussion: vuln.discussion || '',
+                    checkContent: vuln.checkContent || '',
+                    fixText: vuln.fixText || '',
+                    ccis: Array.isArray(vuln.ccis) ? vuln.ccis : [],
+                    nistControls: Array.isArray(vuln.nistControls) ? vuln.nistControls : [],
+                    families: Array.isArray(vuln.families) ? vuln.families : [],
+                    searchableText: buildSearchBlob({
+                        rule_title: vuln.title,
+                        discussion: vuln.discussion,
+                        check_content: vuln.checkContent,
+                        fix_text: vuln.fixText,
+                        finding_details: vuln.findingDetails
+                    }, vuln.stigName)
+                }));
+                
+                return {
+                    type: 'EXPORTED_MAPPINGS',
+                    rows: rows
+                };
+            } else {
+                // Handle standard CKLB JSON format
+                return {
+                    type: 'CKLB',
+                    rows: normalizeRows(json, customCciMap)
+                };
+            }
         } else if (fileName.endsWith('.ckl') || fileName.endsWith('.xml')) {
             // Parse CKL XML format
             const rows = parseCklXml(text, customCciMap);
@@ -267,13 +334,21 @@ const FileImporter = (() => {
         const stigData = {};
         const stigDataElements = vuln.querySelectorAll('STIG_DATA');
         
-        // Extract all STIG_DATA attributes
+        // Extract all STIG_DATA attributes and collect all CCI references
+        const allCciReferences = [];
+        
         stigDataElements.forEach(data => {
             const attr = data.querySelector('VULN_ATTRIBUTE')?.textContent?.trim();
             const value = data.querySelector('ATTRIBUTE_DATA')?.textContent?.trim();
             
             if (attr && value !== undefined) {
                 stigData[attr] = value;
+                
+                // Check for CCI references in various attribute names (case-insensitive)
+                const attrLower = attr.toLowerCase();
+                if (attrLower === 'cci_ref' || attrLower === 'cci_refs' || attrLower === 'cci' || attrLower === 'ccis') {
+                    allCciReferences.push(value);
+                }
             }
         });
         
@@ -282,6 +357,50 @@ const FileImporter = (() => {
         const findingDetails = vuln.querySelector('FINDING_DETAILS')?.textContent?.trim() || '';
         const comments = vuln.querySelector('COMMENTS')?.textContent?.trim() || '';
         
+        // Collect all CCI references from multiple sources
+        const cciSources = [
+            // From STIG_DATA attributes (collected above)
+            ...allCciReferences,
+            // From direct CCI_REF nodes under VULN
+            ...Array.from(vuln.querySelectorAll('CCI_REF')).map(n => n.textContent?.trim()).filter(Boolean),
+            // From any nested CCI_REF nodes (more comprehensive search)
+            ...Array.from(vuln.querySelectorAll('*')).filter(el => el.tagName === 'CCI_REF').map(n => n.textContent?.trim()).filter(Boolean),
+            // Check for CCIs in the text content of various fields
+            ...(stigData.CCI_REF ? [stigData.CCI_REF] : []),
+            ...(stigData.CCI_REFS ? [stigData.CCI_REFS] : []),
+            ...(stigData.CCI ? [stigData.CCI] : []),
+            ...(stigData.CCIS ? [stigData.CCIS] : [])
+        ];
+        
+        // Split delimited strings and normalize all CCI references
+        const allCciRaw = cciSources
+            .filter(Boolean)
+            .flatMap(s => {
+                const str = String(s).trim();
+                // Split on various delimiters and clean up
+                return str.split(/[;:,\s\n\r\t]+/)
+                    .map(cci => cci.trim())
+                    .filter(cci => cci && (cci.startsWith('CCI-') || /^\d{6}$/.test(cci)))
+                    .map(cci => cci.startsWith('CCI-') ? cci : `CCI-${cci.padStart(6, '0')}`);
+            });
+        
+        const uniqueCcis = Array.from(new Set(allCciRaw));
+
+        // Debug logging for problematic rules
+        const problemRules = ['V-258034', 'V-258035', 'V-258036'];
+        const vulnId = stigData.Vuln_Num || '';
+        if (problemRules.includes(vulnId)) {
+            console.log(`[CKL DEBUG] Processing rule ${vulnId}:`, {
+                vulnId,
+                stigDataKeys: Object.keys(stigData),
+                cciSources: cciSources.filter(Boolean),
+                allCciRaw,
+                uniqueCcis,
+                stigData_CCI_REF: stigData.CCI_REF,
+                allCciReferences
+            });
+        }
+
         // Map CKL format to normalized format
         const row = {
             group_id: stigData.Vuln_Num || '',
@@ -304,8 +423,8 @@ const FileImporter = (() => {
             status: status.toLowerCase().replace(/\s+/g, '_'),
             finding_details: findingDetails,
             comments: comments,
-            ccis: stigData.CCI_REF ? [stigData.CCI_REF] : [], // Expected by renderTable
-            cci_refs: stigData.CCI_REF ? [stigData.CCI_REF] : [],
+            ccis: uniqueCcis,
+            cci_refs: uniqueCcis,
             ia_controls: stigData.IA_Controls || '',
             legacy_ids: [],
             stig_uuid: stigData.STIG_UUID || '',
@@ -322,10 +441,10 @@ const FileImporter = (() => {
         row.nistControls = allNist;
         row.families = Array.from(new Set(allNist.map(deriveFamily).filter(Boolean)));
         
-        // Map CCIs to NIST controls if available
-        if (customCciMap && row.cci_refs.length > 0) {
-            const cciNist = row.cci_refs.flatMap(cci => customCciMap[cci] || []);
-            row.nistControls = Array.from(new Set([...row.nistControls, ...cciNist]));
+        // Map CCIs to NIST controls using provided map or DataManager fallback
+        if (row.cci_refs.length > 0) {
+            const mappedFromCci = mapCcisToNist(row.cci_refs, customCciMap);
+            row.nistControls = Array.from(new Set([...row.nistControls, ...mappedFromCci]));
             row.families = Array.from(new Set(row.nistControls.map(deriveFamily).filter(Boolean)));
         }
         

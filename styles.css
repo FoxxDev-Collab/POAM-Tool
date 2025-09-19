@@ -2852,3 +2852,66 @@
 .workflow-note p:last-child {
   margin-bottom: 0;
 }
+/* Export/Import functionality styles */
+
+.export-import-group {
+    position: relative;
+    display: inline-flex;
+    gap: 8px;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 1000;
+    min-width: 240px;
+    padding: 4px 0;
+    margin-top: 2px;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    color: #333;
+    line-height: 1.4;
+    font-size: 14px;
+}
+
+.dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+.dropdown-item small {
+    display: block;
+    color: #666;
+    font-size: 0.8em;
+    margin-top: 3px;
+    font-weight: normal;
+}
+
+.dropdown-arrow {
+    margin-left: 4px;
+    font-size: 10px;
+    vertical-align: middle;
+}
+
+.btn.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn.btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}

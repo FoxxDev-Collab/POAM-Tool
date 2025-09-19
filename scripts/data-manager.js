@@ -296,6 +296,56 @@ class DataManager {
         });
     }
 
+    // Compile POAM data into current data structure
+    async compilePoamData(poams, milestones) {
+        try {
+            console.log('[DataManager] Compiling POAM data...');
+
+            // Ensure we have current data structure
+            if (!this.currentData) {
+                this.currentData = {
+                    metadata: {
+                        version: "1.0",
+                        type: "consolidated-stig-data",
+                        createdAt: new Date().toISOString(),
+                        lastUpdated: new Date().toISOString()
+                    },
+                    vulnerabilities: [],
+                    cciMappings: {},
+                    files: [],
+                    poams: [],
+                    milestones: []
+                };
+            }
+
+            // Update POAMs and milestones
+            this.currentData.poams = poams || [];
+            this.currentData.milestones = milestones || [];
+
+            // Update metadata
+            this.currentData.metadata.lastUpdated = new Date().toISOString();
+            this.currentData.metadata.totalPoams = this.currentData.poams.length;
+            this.currentData.metadata.totalMilestones = this.currentData.milestones.length;
+
+            // Force save to localStorage with verification
+            const saved = this.saveToStorage();
+            if (!saved) {
+                throw new Error('Failed to save POAM data to localStorage');
+            }
+
+            console.log('[DataManager] POAM data compiled successfully:', {
+                poams: this.currentData.poams.length,
+                milestones: this.currentData.milestones.length
+            });
+
+            return this.currentData;
+
+        } catch (error) {
+            console.error('[DataManager] Failed to compile POAM data:', error);
+            throw error;
+        }
+    }
+
     // Add POAM to current data and return updated data structure
     addPoamToData(poamData) {
         if (!this.currentData) {
@@ -401,10 +451,9 @@ class DataManager {
     }
 
     async getPOAMs() {
-        // Always try to restore from localStorage first
-        if (!this.currentData) {
-            this.restoreFromStorage();
-        }
+        // Always try to restore from localStorage first, even if currentData exists
+        console.log('[DataManager] getPOAMs called - forcing data restoration...');
+        this.restoreFromStorage();
 
         console.log('[DataManager] getPOAMs called - currentData state:', {
             hasCurrentData: !!this.currentData,
@@ -416,11 +465,15 @@ class DataManager {
     }
 
     async getMilestones(poamId = null) {
+        // Always try to restore from localStorage first, even if currentData exists
+        console.log('[DataManager] getMilestones called - forcing data restoration...');
+        this.restoreFromStorage();
+
         if (!this.currentData || !this.currentData.milestones) {
             console.log('[DataManager] No milestones in current data');
             return [];
         }
-        
+
         if (poamId) {
             return this.currentData.milestones.filter(m => m.poamId === poamId);
         }
@@ -453,8 +506,11 @@ class DataManager {
         };
     }
 
-    // Export all current data
+    // Export all current data for file sharing in airgapped environments
     async exportAllData() {
+        // Force restore from localStorage first
+        this.restoreFromStorage();
+
         if (!this.currentData) {
             throw new Error('No data loaded to export');
         }
@@ -462,8 +518,182 @@ class DataManager {
         return {
             exportDate: new Date().toISOString(),
             version: '1.0',
+            exportType: 'complete-poam-data',
+            application: 'Cybersecurity Management Suite',
             data: this.currentData
         };
+    }
+
+    // Export only POAM data (for sharing POAMs without vulnerabilities)
+    async exportPOAMDataOnly() {
+        // Force restore from localStorage first
+        this.restoreFromStorage();
+
+        const poams = await this.getPOAMs();
+        const milestones = await this.getMilestones();
+
+        const exportData = {
+            exportDate: new Date().toISOString(),
+            version: '1.0',
+            exportType: 'poam-data-only',
+            application: 'Cybersecurity Management Suite',
+            metadata: {
+                totalPOAMs: poams.length,
+                totalMilestones: milestones.length,
+                exportedBy: 'POAM Management System',
+                note: 'This file contains POAM and milestone data for import into another system'
+            },
+            data: {
+                poams: poams,
+                milestones: milestones,
+                metadata: {
+                    ...this.currentData?.metadata,
+                    lastExported: new Date().toISOString()
+                }
+            }
+        };
+
+        return exportData;
+    }
+
+    // Import complete data file and merge with existing data
+    async importData(importedData, mergeStrategy = 'replace') {
+        try {
+            console.log('[DataManager] Importing data with strategy:', mergeStrategy);
+
+            // Validate import data
+            if (!this.validateImportData(importedData)) {
+                throw new Error('Invalid import data format');
+            }
+
+            const importData = importedData.data || importedData;
+
+            if (mergeStrategy === 'replace') {
+                // Replace all current data
+                this.currentData = {
+                    ...importData,
+                    metadata: {
+                        ...importData.metadata,
+                        importedAt: new Date().toISOString(),
+                        lastUpdated: new Date().toISOString()
+                    }
+                };
+            } else if (mergeStrategy === 'merge') {
+                // Merge with existing data
+                if (!this.currentData) {
+                    this.currentData = {
+                        metadata: {
+                            version: "1.0",
+                            type: "consolidated-stig-data",
+                            createdAt: new Date().toISOString(),
+                            lastUpdated: new Date().toISOString()
+                        },
+                        vulnerabilities: [],
+                        cciMappings: {},
+                        files: [],
+                        poams: [],
+                        milestones: []
+                    };
+                }
+
+                // Merge POAMs (avoid duplicates by vulnId or id)
+                const existingPoamIds = new Set(
+                    this.currentData.poams.map(p => p.vulnId || p.id)
+                );
+                const newPoams = (importData.poams || []).filter(
+                    p => !existingPoamIds.has(p.vulnId || p.id)
+                );
+                this.currentData.poams = [...this.currentData.poams, ...newPoams];
+
+                // Merge milestones (avoid duplicates by id)
+                const existingMilestoneIds = new Set(
+                    this.currentData.milestones.map(m => m.id)
+                );
+                const newMilestones = (importData.milestones || []).filter(
+                    m => !existingMilestoneIds.has(m.id)
+                );
+                this.currentData.milestones = [...this.currentData.milestones, ...newMilestones];
+
+                // Merge vulnerabilities if present
+                if (importData.vulnerabilities && importData.vulnerabilities.length > 0) {
+                    const existingVulnIds = new Set(
+                        this.currentData.vulnerabilities.map(v => v.id || v.group_id)
+                    );
+                    const newVulns = importData.vulnerabilities.filter(
+                        v => !existingVulnIds.has(v.id || v.group_id)
+                    );
+                    this.currentData.vulnerabilities = [...this.currentData.vulnerabilities, ...newVulns];
+                }
+
+                // Update metadata
+                this.currentData.metadata = {
+                    ...this.currentData.metadata,
+                    lastUpdated: new Date().toISOString(),
+                    lastImport: new Date().toISOString(),
+                    totalPoams: this.currentData.poams.length,
+                    totalMilestones: this.currentData.milestones.length
+                };
+            }
+
+            // Save to localStorage
+            const saved = this.saveToStorage();
+            if (!saved) {
+                throw new Error('Failed to save imported data to localStorage');
+            }
+
+            console.log('[DataManager] Data imported successfully:', {
+                strategy: mergeStrategy,
+                poams: this.currentData.poams.length,
+                milestones: this.currentData.milestones.length,
+                vulnerabilities: this.currentData.vulnerabilities?.length || 0
+            });
+
+            this.emit('dataImported', { strategy: mergeStrategy, data: this.currentData });
+            return this.currentData;
+
+        } catch (error) {
+            console.error('[DataManager] Import failed:', error);
+            throw error;
+        }
+    }
+
+    // Validate imported data structure
+    validateImportData(data) {
+        if (!data || typeof data !== 'object') return false;
+
+        // Check for valid export types
+        const validTypes = ['complete-poam-data', 'poam-data-only', 'cci-stig-mappings'];
+        if (data.exportType && !validTypes.includes(data.exportType)) return false;
+
+        // Must have data property or be the data itself
+        const actualData = data.data || data;
+        if (!actualData || typeof actualData !== 'object') return false;
+
+        return true;
+    }
+
+    // Download data as file with consistent naming
+    downloadDataFile(data, filename) {
+        try {
+            const jsonString = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            console.log(`[DataManager] Downloaded ${filename}`);
+            return true;
+        } catch (error) {
+            console.error(`[DataManager] Error downloading ${filename}:`, error);
+            throw error;
+        }
     }
 
     // Event system

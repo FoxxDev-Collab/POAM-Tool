@@ -26,10 +26,16 @@
             <span class="btn-icon"></span>
             New POAM
           </button>
-          <button id="export-btn" class="btn btn-export">
+          <button id="export-btn" class="btn btn-export" onclick="poamManager.exportData('complete')">
             <span class="btn-icon"></span>
-            Export Data
+            Export POAMs
           </button>
+
+          <label for="import-file" class="btn btn-secondary">
+            <span class="btn-icon"></span>
+            Import POAMs
+          </label>
+          <input id="import-file" type="file" accept=".json" style="display: none;" onchange="handleFileImport(this)">
         </div>
 
         <div class="filter-group">
@@ -420,18 +426,18 @@
   </div>
 
   <!-- Core Systems (load first) -->
-  <script src="../scripts/app-state.js"></script>
-  <script src="../scripts/data-manager.js"></script>
-  
   <!-- UI Framework and Components -->
   <link rel="stylesheet" href="../components/ui-components.css">
   <script src="../components/ui-framework.js"></script>
   <script src="../components/icon-library.js"></script>
   <script src="../components/ui-components.js"></script>
-  
-  <!-- Navigation and Application-specific UI components -->
+
+  <!-- Navigation and UI components -->
   <script src="../components/navigation.js"></script>
   <script src="../components/status-messages.js"></script>
+
+  <script src="../scripts/app-state.js"></script>
+  <script src="../scripts/data-manager.js"></script>
   
   <!-- POAM Management functionality -->
   <script src="../scripts/poam-manager.js"></script>
@@ -481,6 +487,9 @@
 
         // Add proper icons to UI elements
         initializeIcons();
+
+        // Setup export/import functionality
+        setupExportImportIcons();
 
         console.log('POAM Management Page ready!');
 
@@ -548,6 +557,60 @@
       }
     }
 
+
+
+    // Handle file import
+    async function handleFileImport(input) {
+      try {
+        const file = input.files[0];
+        if (!file) return;
+
+        if (!file.name.endsWith('.json')) {
+          alert('Please select a JSON file exported from this application.');
+          input.value = '';
+          return;
+        }
+
+        // Show loading indicator
+        const originalText = input.previousElementSibling.textContent;
+        input.previousElementSibling.textContent = 'Importing...';
+
+        // Import the data
+        const result = await poamManager.importData(file, 'ask');
+
+        if (result.success) {
+          console.log('Import successful:', result);
+        }
+
+      } catch (error) {
+        console.error('Import failed:', error);
+        alert(`Import failed: ${error.message}`);
+      } finally {
+        // Reset button text and clear input
+        const label = input.previousElementSibling;
+        if (label) label.textContent = 'Import Data';
+        input.value = '';
+      }
+    }
+
+    // Setup export/import icons
+    function setupExportImportIcons() {
+      // Add icons to import button
+      const importLabel = document.querySelector('label[for="import-file"]');
+      const importIcon = importLabel?.querySelector('.btn-icon');
+      if (importIcon && window.Icons) {
+        const icon = window.Icons.create('upload', { size: 16, strokeWidth: 2 });
+        if (icon) importIcon.appendChild(icon);
+      }
+
+      // Add icon to export button
+      const exportBtn = document.getElementById('export-btn');
+      const exportIcon = exportBtn?.querySelector('.btn-icon');
+      if (exportIcon && window.Icons) {
+        const icon = window.Icons.create('download', { size: 16, strokeWidth: 2 });
+        if (icon) exportIcon.appendChild(icon);
+      }
+    }
 
     // Handle bulk POAM creation from imported vulnerabilities
     async function handleBulkPoamCreation(vulnerabilities, exportImportManager, dataManager, statusMessages) {

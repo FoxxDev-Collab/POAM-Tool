@@ -45,7 +45,8 @@ class POAMManager {
         // Export functionality
         const exportBtn = document.getElementById('export-btn');
         if (exportBtn) {
-            exportBtn.addEventListener('click', () => this.exportData());
+            // Export button should be handled by onclick in HTML
+            console.log('[POAMManager] Export button found - using onclick handler');
         }
     }
 
@@ -71,6 +72,10 @@ class POAMManager {
                 return;
             }
 
+            // Force restore from localStorage first
+            console.log('[POAMManager] Forcing data restoration from localStorage...');
+            this.dataManager.restoreFromStorage();
+
             // Load POAMs
             if (typeof this.dataManager.getPOAMs === 'function') {
                 this.currentPOAMs = await this.dataManager.getPOAMs();
@@ -84,7 +89,7 @@ class POAMManager {
                 this.currentMilestones = await this.dataManager.getMilestones();
                 this.renderMilestones();
             }
-            
+
         } catch (error) {
             console.error('Failed to load POAM data:', error);
             if (this.statusMessages) {
@@ -759,35 +764,105 @@ class POAMManager {
         });
     }
 
-    async exportData() {
+    async exportData(exportType = 'complete') {
         try {
-            if (!this.dataManager || typeof this.dataManager.exportAllData !== 'function') {
-                throw new Error('Data export not available');
+            if (!this.dataManager) {
+                throw new Error('Data manager not available');
             }
 
-            const data = await this.dataManager.exportAllData();
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `poam-export-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            if (this.statusMessages) {
-                this.statusMessages.showSuccess('Data exported successfully');
+            let data;
+            let filename;
+            const timestamp = new Date().toISOString().split('T')[0];
+
+            if (exportType === 'complete') {
+                data = await this.dataManager.exportAllData();
+                filename = `poam-complete-export-${timestamp}.json`;
+            } else if (exportType === 'poams-only') {
+                data = await this.dataManager.exportPOAMDataOnly();
+                filename = `poam-data-export-${timestamp}.json`;
+            } else {
+                throw new Error('Invalid export type');
             }
-            
+
+            // Download the file
+            this.dataManager.downloadDataFile(data, filename);
+
+            if (this.statusMessages) {
+                const message = exportType === 'complete'
+                    ? 'Complete POAM data exported successfully'
+                    : 'POAM data exported successfully';
+                this.statusMessages.showSuccess(message);
+            }
+
+            return { success: true, filename, exportType };
+
         } catch (error) {
             console.error('Export failed:', error);
             if (this.statusMessages) {
                 this.statusMessages.showError('Failed to export data: ' + error.message);
             }
+            throw error;
         }
     }
+
+    // Import POAM data from file
+    async importData(file, mergeStrategy = 'replace') {
+        try {
+            if (!this.dataManager) {
+                throw new Error('Data manager not available');
+            }
+
+            // Read and parse the file
+            const fileContent = await file.text();
+            const importData = JSON.parse(fileContent);
+
+            // Validate the import data
+            if (!this.dataManager.validateImportData(importData)) {
+                throw new Error('Invalid import file format. Please use a file exported from this application.');
+            }
+
+            // Show confirmation dialog for merge strategy
+            if (mergeStrategy === 'ask') {
+                const userChoice = confirm(
+                    'Choose import strategy:\n\n' +
+                    'OK = Replace all existing data\n' +
+                    'Cancel = Merge with existing data\n\n' +
+                    'Note: Replace will remove all current POAMs and replace with imported data.\n' +
+                    'Merge will add imported POAMs to existing ones (avoiding duplicates).'
+                );
+                mergeStrategy = userChoice ? 'replace' : 'merge';
+            }
+
+            // Import the data
+            await this.dataManager.importData(importData, mergeStrategy);
+
+            // Reload the UI
+            await this.loadData();
+
+            const message = mergeStrategy === 'replace'
+                ? 'Data imported successfully (replaced existing data)'
+                : 'Data imported successfully (merged with existing data)';
+
+            if (this.statusMessages) {
+                this.statusMessages.showSuccess(message);
+            }
+
+            return {
+                success: true,
+                strategy: mergeStrategy,
+                poams: this.currentPOAMs.length,
+                milestones: this.currentMilestones.length
+            };
+
+        } catch (error) {
+            console.error('Import failed:', error);
+            if (this.statusMessages) {
+                this.statusMessages.showError('Failed to import data: ' + error.message);
+            }
+            throw error;
+        }
+    }
+
 
     populateEditForm(poam) {
         // Store the editing POAM reference

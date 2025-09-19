@@ -104,6 +104,14 @@
             </svg>
             Export Mappings
           </button>
+
+          <label for="import-poam-file" class="btn btn-secondary" title="Import POAM data from shared file">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1zm3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4h-3.5zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z"/>
+            </svg>
+            Import POAMs
+          </label>
+          <input id="import-poam-file" type="file" accept=".json" style="display: none;" onchange="handlePOAMImport(this)">
         </div>
       </div>
     </section>
@@ -491,6 +499,72 @@
 
 
 
+    // Handle POAM import on STIG page
+    async function handlePOAMImport(input) {
+      try {
+        const file = input.files[0];
+        if (!file) return;
+
+        if (!file.name.endsWith('.json')) {
+          alert('Please select a JSON file exported from this application.');
+          input.value = '';
+          return;
+        }
+
+        // Show loading indicator
+        const label = input.previousElementSibling;
+        const originalText = label.textContent;
+        label.textContent = 'Importing...';
+
+        // Get the data manager
+        const dataManager = AppState?.state?.dataManager;
+        if (!dataManager) {
+          throw new Error('Data manager not available');
+        }
+
+        // Read and parse the file
+        const fileContent = await file.text();
+        const importData = JSON.parse(fileContent);
+
+        // Validate the import data
+        if (!dataManager.validateImportData(importData)) {
+          throw new Error('Invalid import file format. Please use a file exported from this application.');
+        }
+
+        // Show confirmation dialog for merge strategy
+        const userChoice = confirm(
+          'Choose import strategy:\n\n' +
+          'OK = Replace all existing POAM data\n' +
+          'Cancel = Merge with existing POAM data\n\n' +
+          'Note: This will affect your POAM data, not STIG analysis data.'
+        );
+        const mergeStrategy = userChoice ? 'replace' : 'merge';
+
+        // Import the data
+        await dataManager.importData(importData, mergeStrategy);
+
+        const message = mergeStrategy === 'replace'
+          ? 'POAM data imported successfully (replaced existing data)'
+          : 'POAM data imported successfully (merged with existing data)';
+
+        alert(message);
+
+        // Show status message if available
+        if (AppState?.getComponent && AppState.getComponent('statusMessages')) {
+          AppState.getComponent('statusMessages').showSuccess(message);
+        }
+
+      } catch (error) {
+        console.error('Import failed:', error);
+        alert(`Import failed: ${error.message}`);
+      } finally {
+        // Reset button text and clear input
+        const label = input.previousElementSibling;
+        if (label) label.textContent = 'Import POAMs';
+        input.value = '';
+      }
+    }
+
     function showFallbackError(message) {
       const errorDiv = document.createElement('div');
       errorDiv.style.cssText = `
@@ -508,7 +582,7 @@
       `;
       errorDiv.textContent = message;
       document.body.appendChild(errorDiv);
-      
+
       setTimeout(() => {
         if (errorDiv.parentNode) {
           errorDiv.parentNode.removeChild(errorDiv);

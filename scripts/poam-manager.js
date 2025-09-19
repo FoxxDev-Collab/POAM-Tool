@@ -76,19 +76,21 @@ class POAMManager {
             console.log('[POAMManager] Forcing data restoration from localStorage...');
             this.dataManager.restoreFromStorage();
 
-            // Load POAMs
-            if (typeof this.dataManager.getPOAMs === 'function') {
-                this.currentPOAMs = await this.dataManager.getPOAMs();
-                console.log('[POAMManager] Loaded POAMs:', this.currentPOAMs.length, this.currentPOAMs);
-                this.populateFilterOptions();
-                this.applyFiltersAndSort();
-            }
+            // Load POAMs and Milestones in parallel
+            const [poams, milestones] = await Promise.all([
+                this.dataManager.getPOAMs ? this.dataManager.getPOAMs() : Promise.resolve([]),
+                this.dataManager.getMilestones ? this.dataManager.getMilestones() : Promise.resolve([])
+            ]);
 
-            // Load Milestones
-            if (typeof this.dataManager.getMilestones === 'function') {
-                this.currentMilestones = await this.dataManager.getMilestones();
-                this.renderMilestones();
-            }
+            this.currentPOAMs = poams;
+            this.currentMilestones = milestones;
+
+            console.log('[POAMManager] Loaded POAMs:', this.currentPOAMs.length);
+            console.log('[POAMManager] Loaded Milestones:', this.currentMilestones.length);
+
+            this.populateFilterOptions();
+            this.applyFiltersAndSort(); // This will call renderPOAMs
+            this.renderMilestones();
 
         } catch (error) {
             console.error('Failed to load POAM data:', error);

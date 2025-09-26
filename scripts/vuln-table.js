@@ -304,6 +304,7 @@ const VulnTable = (() => {
     return {
         init,
         setRows,
+        getFilteredRows: applyFiltersAndGetRows, // Alias for compatibility
         renderTable,
         applyFilters,
         applyFiltersAndGetRows,

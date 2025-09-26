@@ -759,32 +759,61 @@ function sortableNistControl(controlStr) {
 
 // Global function for export button
 async function exportToExcel() {
+  console.log('[Export] Starting export process...');
   let filteredData = [];
   
-  // Try multiple sources to get the data
-  if (typeof getFilteredRows === 'function') {
-    filteredData = getFilteredRows();
-  } else if (typeof VulnTable !== 'undefined' && VulnTable.applyFiltersAndGetRows) {
-    filteredData = VulnTable.applyFiltersAndGetRows();
-  } else if (window.app && window.app.getFilteredRows) {
-    filteredData = window.app.getFilteredRows();
-  } else {
-    // Try to get data directly from DataManager
-    try {
-      const dataManager = (window.AppState && AppState.state && AppState.state.dataManager) 
-        ? AppState.state.dataManager 
-        : window.DataManager;
+  // Try multiple sources to get the data with better error handling
+  try {
+    // 1. Try VulnTable first (most likely source)
+    if (typeof VulnTable !== 'undefined' && typeof VulnTable.getFilteredRows === 'function') {
+      console.log('[Export] Getting data from VulnTable.getFilteredRows()');
+      filteredData = VulnTable.getFilteredRows();
+    } 
+    // 2. Try applyFiltersAndGetRows if available
+    else if (typeof VulnTable !== 'undefined' && typeof VulnTable.applyFiltersAndGetRows === 'function') {
+      console.log('[Export] Getting data from VulnTable.applyFiltersAndGetRows()');
+      filteredData = VulnTable.applyFiltersAndGetRows();
+    }
+    // 3. Try global getFilteredRows
+    else if (typeof window.getFilteredRows === 'function') {
+      console.log('[Export] Getting data from global getFilteredRows()');
+      filteredData = window.getFilteredRows();
+    }
+    // 4. Try window.app.getFilteredRows
+    else if (window.app && typeof window.app.getFilteredRows === 'function') {
+      console.log('[Export] Getting data from window.app.getFilteredRows()');
+      filteredData = window.app.getFilteredRows();
+    }
+    // 5. Try DataManager as last resort
+    else {
+      console.log('[Export] Attempting to get data from DataManager');
+      const dataManager = window.DataManager || (window.AppState && window.AppState.state && window.AppState.state.dataManager);
       
       if (dataManager) {
+        console.log('[Export] DataManager found, getting STIG data');
         if (typeof dataManager.restoreFromStorage === 'function') {
+          console.log('[Export] Restoring data from localStorage');
           dataManager.restoreFromStorage();
         }
+        
         const stigData = await dataManager.getStigData();
-        filteredData = stigData.rows || [];
+        console.log('[Export] Retrieved STIG data:', {
+          rows: stigData?.rows?.length || 0,
+          files: stigData?.files?.length || 0,
+          metadata: stigData?.metadata
+        });
+        
+        if (stigData && Array.isArray(stigData.rows)) {
+          filteredData = stigData.rows;
+        } else if (stigData && Array.isArray(stigData)) {
+          filteredData = stigData; // In case the data is directly an array
+        }
       }
-    } catch (error) {
-      console.error('Error getting data from DataManager:', error);
     }
+  } catch (error) {
+    console.error('[Export] Error getting data for export:', error);
+    alert(`Error preparing data for export: ${error.message}`);
+    return;
   }
   
   if (!filteredData || filteredData.length === 0) {
